@@ -1,6 +1,12 @@
+xfwm4 (4.14.1-1-0rangeeos1) focal; urgency=medium
+
+  * Apply "stacking: Above goes on top of fullscreen" (https://gitlab.xfce.org/xfce/xfwm4/-/commit/cdcce73653d430d9cbddba3873e4e98ddae0a6a8)
+
+ -- René Vögeli <rvoegeli@rangee.com>  Mon, 13 Jun 2022 16:39:37 -0200
+
 xfwm4 (4.14.1-0ubuntu1) focal; urgency=medium
 
-  * New upstream bugfix release 
+  * New upstream bugfix release
   * d/patches/lp1869567.patch:
     - Dropped, included upstream
 
