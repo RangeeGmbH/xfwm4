@@ -82,43 +82,41 @@
 #define MAIN_EVENT_MASK BASE_EVENT_MASK
 #endif /* HAVE_COMPOSITOR */
 
-enum {
-    COMPOSITOR_MODE_OFF = 0,
-    COMPOSITOR_MODE_AUTO,
-    COMPOSITOR_MODE_MANUAL
-};
-
-static gint compositor = COMPOSITOR_MODE_MANUAL;
+#ifdef HAVE_COMPOSITOR
+static gboolean compositor = TRUE;
 static vblankMode vblank_mode = VBLANK_AUTO;
 #define XFWM4_ERROR      (xfwm4_error_quark ())
-
-#ifndef DEBUG
-/* For what, IEEE Std 1003.1-2001, Section 12.2, Utility Syntax Guidelines.*/
-static char revision[]="@(#)$ " PACKAGE " version " VERSION " revision " REVISION " $";
-#endif
 
 static GQuark
 xfwm4_error_quark (void)
 {
   return g_quark_from_static_string ("xfwm4-error-quark");
 }
+#endif /* HAVE_COMPOSITOR */
 
 #ifdef DEBUG
 static gboolean
-setupLog (void)
+setupLog (gboolean debug)
 {
     const gchar *str;
     gchar *logfile;
     int fd;
 
-    str = g_getenv ("XFWM4_LOG_FILE");
-    if (str)
+    if (debug)
     {
-        logfile = g_strdup (str);
+        str = g_getenv ("XFWM4_LOG_FILE");
+        if (str)
+        {
+            logfile = g_strdup (str);
+        }
+        else
+        {
+            logfile = g_strdup_printf ("xfwm4-debug-%d.log", (int) getpid ());
+        }
     }
     else
     {
-        logfile = g_strdup_printf ("xfwm4-debug-%d.log", (int) getpid ());
+        logfile = "/dev/null";
     }
 
     fd = dup(fileno(stderr));
@@ -137,8 +135,11 @@ setupLog (void)
         return FALSE;
     }
 
-    g_print ("Logging to %s\n", logfile);
-    g_free (logfile);
+    if (debug)
+    {
+        g_print ("Logging to %s\n", logfile);
+        g_free (logfile);
+    }
 
     return TRUE;
 }
@@ -382,6 +383,14 @@ print_version (void)
 #else
     g_print ("No\n");
 #endif
+
+    g_print ("\t- X Input 2 support:                            ");
+#ifdef HAVE_XI2
+    g_print ("Yes\n");
+#else
+    g_print ("No\n");
+#endif
+
     g_print ("\t- Embedded compositor:                          ");
 #ifdef HAVE_COMPOSITOR
     g_print ("Yes\n");
@@ -407,31 +416,6 @@ print_version (void)
 }
 
 #ifdef HAVE_COMPOSITOR
-static gint
-get_default_compositor (DisplayInfo *display_info)
-{
-    /*
-     * Don't even check for the render speed if there is no compositor.
-     */
-    if (!display_info->enable_compositor)
-    {
-        return 0;
-    }
-
-    /*
-     * Check if the XServer is black listed.
-     */
-    if (!compositorTestServer (display_info))
-    {
-        g_warning ("The XServer currently in use on this system is not suitable for the compositor");
-        return 0;
-    }
-
-    return 2;
-}
-#endif /* HAVE_COMPOSITOR */
-
-#ifdef HAVE_COMPOSITOR
 static gboolean
 compositor_callback (const gchar  *name,
                      const gchar  *value,
@@ -444,15 +428,11 @@ compositor_callback (const gchar  *name,
 
     if (strcmp (value, "off") == 0)
     {
-        compositor = COMPOSITOR_MODE_OFF;
-    }
-    else if (strcmp (value, "auto") == 0)
-    {
-        compositor = COMPOSITOR_MODE_AUTO;
+        compositor = FALSE;
     }
     else if (strcmp (value, "on") == 0)
     {
-        compositor = COMPOSITOR_MODE_MANUAL;
+        compositor = TRUE;
     }
     else
     {
@@ -499,20 +479,49 @@ vblank_callback (const gchar  *name,
 
     return succeed;
 }
+
+static void
+init_compositor_screen (ScreenInfo *screen_info)
+{
+    DisplayInfo *display_info;
+
+    display_info = screen_info->display_info;
+    if (vblank_mode != VBLANK_AUTO)
+    {
+        compositorSetVblankMode (screen_info, vblank_mode);
+    }
+
+    if (display_info->enable_compositor)
+    {
+        gboolean xfwm4_compositor;
+
+        xfwm4_compositor = TRUE;
+        if (screen_info->params->use_compositing)
+        {
+            /* Enable compositor if "use compositing" is enabled */
+            xfwm4_compositor = compositorManageScreen (screen_info);
+        }
+        /*
+           The user may want to use the manual compositing, but the installed
+           system may not support it, so we need to double check, to see if
+           initialization of the compositor was successful.
+          */
+        if (xfwm4_compositor)
+        {
+            /*
+               Acquire selection on XFWM4_COMPOSITING_MANAGER to advertise our own
+               compositing manager (used by WM tweaks to determine whether or not
+               show the "compositor" tab.
+             */
+            setAtomIdManagerOwner (display_info, XFWM4_COMPOSITING_MANAGER,
+                                   screen_info->xroot, screen_info->xfwm4_win);
+        }
+    }
+}
 #endif /* HAVE_COMPOSITOR */
 
-static gboolean
-daemon_callback (const gchar  *name,
-                 const gchar  *value,
-                 gpointer      user_data,
-                 GError      **error)
-{
-    g_warning ("Option 'daemon' is now removed and has no effect!");
-    return TRUE;
-}
-
 static int
-initialize (gint compositor_mode, gboolean replace_wm)
+initialize (gboolean replace_wm)
 {
     DisplayInfo *display_info;
     gint i, nscreens, default_screen;
@@ -527,18 +536,8 @@ initialize (gint compositor_mode, gboolean replace_wm)
     display_info = myDisplayInit (gdk_display_get_default ());
 
 #ifdef HAVE_COMPOSITOR
-    if (compositor_mode < COMPOSITOR_MODE_OFF)
-    {
-        compositor_mode = get_default_compositor (display_info);
-    }
-
-    /* Disabling compositor from command line */
-    if (!compositor_mode)
-    {
-        display_info->enable_compositor = FALSE;
-    }
-    compositorSetCompositeMode (display_info, (compositor_mode == COMPOSITOR_MODE_MANUAL));
-#else /* HAVE_COMPOSITOR */
+    display_info->enable_compositor = compositor;
+#else
     display_info->enable_compositor = FALSE;
 #endif /* HAVE_COMPOSITOR */
 
@@ -562,11 +561,13 @@ initialize (gint compositor_mode, gboolean replace_wm)
         else
         {
             /* create temp 1x1 child window on this screen */
-            temp_xwindow = XCreateSimpleWindow (display_info->dpy, RootWindow (display_info->dpy, i),
+            temp_xwindow = XCreateSimpleWindow (display_info->dpy,
+                                                RootWindow (display_info->dpy, i),
                                                 0, 0, 1, 1, 0, 0, 0);
             /* allocate new GdkWindow with GdkScreen for this window */
-            screen_window = gdk_x11_window_foreign_new_for_display (display_info->gdisplay,
-                                                                    temp_xwindow);
+            screen_window =
+                gdk_x11_window_foreign_new_for_display (display_info->gdisplay,
+                                                        temp_xwindow);
             XDestroyWindow (display_info->dpy, temp_xwindow);
 
             if (screen_window == NULL)
@@ -592,43 +593,12 @@ initialize (gint compositor_mode, gboolean replace_wm)
         {
             return -2;
         }
-
-        if (vblank_mode != VBLANK_AUTO)
+#ifdef HAVE_COMPOSITOR
+        if (display_info->enable_compositor)
         {
-            compositorSetVblankMode (screen_info, vblank_mode);
+            init_compositor_screen (screen_info);
         }
-
-        if (compositor_mode == COMPOSITOR_MODE_AUTO)
-        {
-            compositorManageScreen (screen_info);
-        }
-        else if (compositor_mode == COMPOSITOR_MODE_MANUAL)
-        {
-            gboolean xfwm4_compositor;
-
-            xfwm4_compositor = TRUE;
-            if (screen_info->params->use_compositing)
-            {
-                /* Enable compositor if "use compositing" is enabled */
-                xfwm4_compositor = compositorManageScreen (screen_info);
-            }
-            /*
-               The user may want to use the manual compositing, but the installed
-               system may not support it, so we need to double check, to see if
-               initialization of the compositor was successful.
-             */
-            if (xfwm4_compositor)
-            {
-                /*
-                   Acquire selection on XFWM4_COMPOSITING_MANAGER to advertise our own
-                   compositing manager (used by WM tweaks to determine whether or not
-                   show the "compositor" tab.
-                 */
-                setAtomIdManagerOwner (display_info, XFWM4_COMPOSITING_MANAGER,
-                                       screen_info->xroot, screen_info->xfwm4_win);
-            }
-        }
-
+#endif /* HAVE_COMPOSITOR */
         sn_init_display (screen_info);
         myDisplayAddScreen (display_info, screen_info);
         screen_info->current_ws = getNetCurrentDesktop (display_info, screen_info->xroot);
@@ -686,16 +656,16 @@ main (int argc, char **argv)
     int status;
     GOptionContext *context;
     GError *error = NULL;
-
-#ifndef HAVE_COMPOSITOR
-    gchar *compositor_foo = NULL;
-#endif
+#ifdef DEBUG
+    gboolean debug = FALSE;
+#endif /* DEBUG */
     GOptionEntry option_entries[] =
     {
-        { "daemon", '\0', G_OPTION_FLAG_NO_ARG, G_OPTION_ARG_CALLBACK, daemon_callback, N_("Fork to the background (not supported)"), NULL },
 #ifdef HAVE_COMPOSITOR
-        { "compositor", '\0', 0, G_OPTION_ARG_CALLBACK, compositor_callback, N_("Set the compositor mode"), "on|off|auto" },
-        { "vblank", '\0', 0, G_OPTION_ARG_CALLBACK, vblank_callback, N_("Set the vblank mode"), "off"
+        { "compositor", 'c', 0, G_OPTION_ARG_CALLBACK,
+          compositor_callback, N_("Set the compositor mode"), "on|off" },
+        { "vblank", 'b', 0, G_OPTION_ARG_CALLBACK,
+          vblank_callback, N_("Set the vblank mode"), "off"
 #ifdef HAVE_PRESENT_EXTENSION
           "|xpresent"
 #endif /* HAVE_PRESENT_EXTENSION */
@@ -704,15 +674,16 @@ main (int argc, char **argv)
 #endif /* HAVE_EPOXY */
         },
 #endif /* HAVE_COMPOSITOR */
-        { "replace", '\0', 0, G_OPTION_ARG_NONE, &replace_wm, N_("Replace the existing window manager"), NULL },
-        { "version", 'V', 0, G_OPTION_ARG_NONE, &version, N_("Print version information and exit"), NULL },
+        { "replace", 'r', 0, G_OPTION_ARG_NONE,
+          &replace_wm, N_("Replace the existing window manager"), NULL },
+        { "version", 'V', 0, G_OPTION_ARG_NONE,
+          &version, N_("Print version information and exit"), NULL },
+#ifdef DEBUG
+        { "debug", 'd', 0, G_OPTION_ARG_NONE,
+          &debug, N_("Enable debug logging"), NULL },
+#endif /* DEBUG */
         { NULL }
     };
-
-#ifdef DEBUG
-    setupLog ();
-#endif /* DEBUG */
-    DBG ("xfwm4 starting");
 
 #ifdef HAVE_EPOXY
     /* NVIDIA proprietary/closed source driver queues up to 2 frames by
@@ -764,6 +735,11 @@ main (int argc, char **argv)
     }
     g_option_context_free (context);
 
+#ifdef DEBUG
+    setupLog (debug);
+#endif /* DEBUG */
+    DBG ("xfwm4 starting");
+
     gtk_init (&argc, &argv);
 
     if (G_UNLIKELY (version))
@@ -773,7 +749,7 @@ main (int argc, char **argv)
     }
     init_pango_cache ();
 
-    status = initialize (compositor, replace_wm);
+    status = initialize (replace_wm);
     /*
        status  < 0   =>   Error, cancel execution
        status == 0   =>   Run w/out session manager

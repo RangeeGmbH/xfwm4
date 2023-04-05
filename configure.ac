@@ -9,13 +9,13 @@ dnl xfwm4 - window manager for the Xfce4 desktop environment
 dnl
 
 m4_define([xfwm4_version_major], [4])
-m4_define([xfwm4_version_minor], [14])
+m4_define([xfwm4_version_minor], [16])
 m4_define([xfwm4_version_micro], [1])
-m4_define([xfwm4_version_build], [44809c49])
+m4_define([xfwm4_version_build], [5f61a84ad])
 m4_define([xfwm4_version_tag],   [])
 m4_define([xfwm4_version], [xfwm4_version_major().xfwm4_version_minor().xfwm4_version_micro()ifelse(xfwm4_version_tag(), [git], [xfwm4_version_tag().xfwm4_version_build()], [xfwm4_version_tag()])])
 
-m4_define([gtk_minimum_version], [3.20.0])
+m4_define([gtk_minimum_version], [3.22.0])
 m4_define([xfce_minimum_version], [4.8.0])
 m4_define([libxfce4ui_minimum_version], [4.12.0])
 m4_define([libxfce4kbd_private_minimum_version], [4.12.0])
@@ -29,13 +29,17 @@ m4_define([libepoxy_minimum_version], [1.0])
 m4_define([xpresent_minimum_version], [1.0])
 m4_define([presentproto_minimum_version], [1.1])
 
+dnl debugging support for git snapshots
+m4_define([xfwm4_debug_default], [ifelse(xfwm4_version_tag(), [git], [yes], [minimum])])
+
+
 dnl init autoconf
-AC_COPYRIGHT([Copyright (c) 2002-2015
+AC_COPYRIGHT([Copyright (c) 2002-2020
         The Xfce development team. All rights reserved.
 
 Written for Xfce by Olivier Fourdan <fourdan@xfce.org>.])
 AC_INIT([xfwm4], [xfwm4_version], [xfce4-dev@xfce.org])
-AM_INIT_AUTOMAKE([1.8 dist-bzip2 tar-ustar no-dist-gzip])
+AM_INIT_AUTOMAKE([1.8 dist-bzip2 tar-ustar no-dist-gzip foreign])
 
 AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_HEADERS([config.h])
@@ -52,9 +56,7 @@ AC_ARG_WITH([helper-path-prefix],
 AC_SUBST([HELPER_PATH_PREFIX])
 
 dnl check for UNIX variants
-AC_AIX
-AC_ISC_POSIX
-AC_MINIX
+AC_USE_SYSTEM_EXTENSIONS
 AM_CONDITIONAL([HAVE_CYGWIN], [test "`uname | grep \"CYGWIN\"`" != ""])
 
 dnl check for basic programs
@@ -82,7 +84,7 @@ AC_CHECK_LIB(m, ceil, MATH_LIBS="-lm")
 AC_SUBST([MATH_LIBS])
 
 dnl Check for i18n support
-XDT_I18N([am ar ast be be@tarask bg bn ca cs da de el en_AU en_CA en_GB eo es et eu fa_IR fi fr gl he hr hu hy_AM id ie is it ja ka kk ko lt lv ms nb nl nn oc pa pl pt_BR pt ro ru si sk sl sq sr sv te th tr ug uk ur_PK ur vi zh_CN zh_HK zh_TW ])
+XDT_I18N([])
 
 dnl Check for X11 window system
 XDT_CHECK_LIBX11_REQUIRE
@@ -96,12 +98,34 @@ AC_CHECK_LIB([Xext], [XShapeCombineShape],
     fi
   ], [], [$LIBX11_CFLAGS $LIBX11_LDFLAGS $LIBX11_LIBS])
 
-dnl Check for Xi library
-AC_CHECK_LIB([Xi], [XISelectEvents],
+
+AC_ARG_ENABLE([xi2],
+  AC_HELP_STRING([--enable-xi2], [enable support for the X Input 2 extension])
+  AC_HELP_STRING([--disable-xi2], [don't enable the X Input 2 extension (default)]),
+  [enable_xi2=yes], [])
+have_xi2="no"
+if test x"$enable_xi2" = x"yes"; then
+dnl Check for Xi2 library
+  AC_CHECK_LIB([Xi], [XISelectEvents],
   [
     if ! echo $LIBX11_LIBS | grep -q -- '-lXi'; then
+      have_xi2="yes"
       LIBX11_LIBS="$LIBX11_LIBS -lXi"
       AC_DEFINE([HAVE_XI2], [1], [Define to enable XI2])
+    fi
+  ],
+  [
+    AC_MSG_ERROR([X Input 2 extension support requested but not available])
+  ],
+  [$LIBX11_CFLAGS $LIBX11_LDFLAGS $LIBX11_LIBS])
+fi
+
+dnl Check for XRes library
+AC_CHECK_LIB([XRes], [XResQueryClients],
+  [
+    if ! echo $LIBX11_LIBS | grep -q -- '-lXRes'; then
+      LIBX11_LIBS="$LIBX11_LIBS -lXRes"
+      AC_DEFINE([HAVE_XRES], [1], [Define to enable XRes])
     fi
   ], [], [$LIBX11_CFLAGS $LIBX11_LDFLAGS $LIBX11_LIBS])
 
@@ -284,22 +308,24 @@ fi
 AC_SUBST(ENABLE_KDE_SYSTRAY)
 
 dnl Check for debugging support
-XDT_FEATURE_DEBUG
+XDT_FEATURE_DEBUG([xfwm4_debug_default])
 
 REVISION=unknown
-if test x"44809c49" != x""; then
-    REVISION=44809c49
+if test x"5f61a84ad" != x""; then
+    REVISION=5f61a84ad
 fi
 AC_DEFINE_UNQUOTED([REVISION], "$REVISION", [git id])
 AC_SUBST([REVISION])
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 defaults/Makefile
 helper-dialog/Makefile
 icons/Makefile
+icons/16x16/Makefile
 icons/22x22/Makefile
 icons/48x48/Makefile
+icons/128x128/Makefile
 icons/scalable/Makefile
 po/Makefile.in
 common/Makefile
@@ -313,6 +339,7 @@ themes/default-xhdpi/Makefile
 themes/kokodi/Makefile
 themes/moheli/Makefile
 ])
+AC_OUTPUT
 
 echo
 echo "Build Configuration for $PACKAGE version $VERSION revision $REVISION:"
@@ -321,6 +348,7 @@ echo "  XSync support:                $have_xsync"
 echo "  Render support:               $have_render"
 echo "  Xrandr support:               $have_xrandr"
 echo "  Xpresent support:             $have_xpresent"
+echo "  Xi2 support:                  $have_xi2"
 echo "  Embedded compositor:          $compositor"
 echo "  Epoxy support:                $EPOXY_FOUND"
 echo "  KDE systray protocol proxy:   $kde_systray"

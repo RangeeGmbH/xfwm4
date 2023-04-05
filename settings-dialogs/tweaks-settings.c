@@ -172,6 +172,7 @@ wm_tweaks_dialog_configure_widgets (GtkBuilder *builder)
     GtkWidget *cycle_workspaces_check = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_workspaces_check"));
     GtkWidget *cycle_hidden_check = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_hidden_check"));
     GtkWidget *cycle_minimum_check = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_minimum_check"));
+    GtkWidget *cycle_minimized_check = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_minimized_check"));
     GtkWidget *cycle_draw_frame = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_draw_frame"));
     GtkWidget *cycle_raise = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_raise"));
     GtkWidget *cycle_tabwin_mode = GTK_WIDGET (gtk_builder_get_object (builder, "cycle_tabwin_mode"));
@@ -215,6 +216,8 @@ wm_tweaks_dialog_configure_widgets (GtkBuilder *builder)
     GtkWidget *show_frame_shadow_check = GTK_WIDGET (gtk_builder_get_object (builder, "show_frame_shadow_check"));
     GtkWidget *show_popup_shadow_check = GTK_WIDGET (gtk_builder_get_object (builder, "show_popup_shadow_check"));
     GtkWidget *show_dock_shadow_check = GTK_WIDGET (gtk_builder_get_object (builder, "show_dock_shadow_check"));
+    GtkWidget *zoom_desktop_check = GTK_WIDGET (gtk_builder_get_object (builder, "zoom_desktop_check"));
+    GtkWidget *zoom_pointer_check = GTK_WIDGET (gtk_builder_get_object (builder, "zoom_pointer_check"));
 
     GtkWidget *frame_opacity_scale = GTK_WIDGET (gtk_builder_get_object (builder, "frame_opacity_scale"));
     GtkWidget *inactive_opacity_scale = GTK_WIDGET (gtk_builder_get_object (builder, "inactive_opacity_scale"));
@@ -306,6 +309,10 @@ wm_tweaks_dialog_configure_widgets (GtkBuilder *builder)
                             "/general/cycle_minimum",
                             G_TYPE_BOOLEAN,
                             (GObject *)cycle_minimum_check, "active");
+    xfconf_g_property_bind (xfwm4_channel,
+                            "/general/cycle_minimized",
+                            G_TYPE_BOOLEAN,
+                            (GObject *)cycle_minimized_check, "active");
     xfconf_g_property_bind (xfwm4_channel,
                             "/general/cycle_hidden",
                             G_TYPE_BOOLEAN,
@@ -424,6 +431,14 @@ wm_tweaks_dialog_configure_widgets (GtkBuilder *builder)
                             "/general/show_dock_shadow",
                             G_TYPE_BOOLEAN,
                             (GObject *)show_dock_shadow_check, "active");
+    xfconf_g_property_bind (xfwm4_channel,
+                            "/general/zoom_desktop",
+                            G_TYPE_BOOLEAN,
+                            (GObject *)zoom_desktop_check, "active");
+    xfconf_g_property_bind (xfwm4_channel,
+                            "/general/zoom_pointer",
+                            G_TYPE_BOOLEAN,
+                            (GObject *)zoom_pointer_check, "active");
     xfconf_g_property_bind (xfwm4_channel,
                             "/general/frame_opacity",
                             G_TYPE_INT,

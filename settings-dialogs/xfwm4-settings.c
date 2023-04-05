@@ -63,12 +63,6 @@
 
 
 
-#define XFWM_SETTINGS_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), \
-                                                                     XFWM_TYPE_SETTINGS, \
-                                                                     XfwmSettingsPrivate))
-
-
-
 typedef struct _MenuTemplate            MenuTemplate;
 
 
@@ -82,10 +76,6 @@ enum
 
 
 
-static void       xfwm_settings_class_init                           (XfwmSettingsClass    *klass,
-                                                                      gpointer              data);
-static void       xfwm_settings_init                                 (XfwmSettings         *settings,
-                                                                      gpointer              data);
 static void       xfwm_settings_constructed                          (GObject              *object);
 static void       xfwm_settings_finalize                             (GObject              *object);
 static void       xfwm_settings_get_property                         (GObject              *object,
@@ -206,6 +196,8 @@ struct _XfwmSettingsPrivate
   XfconfChannel         *wm_channel;
 };
 
+G_DEFINE_TYPE_WITH_PRIVATE (XfwmSettings, xfwm_settings, G_TYPE_OBJECT)
+
 struct _MenuTemplate
 {
   const gchar *name;
@@ -220,14 +212,12 @@ enum
 };
 
 
-
-static GObjectClass      *xfwm_settings_parent_class = NULL;
-
 static const MenuTemplate double_click_values[] = {
   { N_("Shade window"), "shade" },
   { N_("Hide window"), "hide" },
   { N_("Maximize window"), "maximize" },
   { N_("Fill window"), "fill" },
+  { N_("Always on top"), "above" },
   { N_("Nothing"), "none" },
   { NULL, NULL }
 };
@@ -252,44 +242,11 @@ static GOptionEntry       opt_entries[] = {
 };
 
 
-GType
-xfwm_settings_get_type (void)
-{
-  static GType type = G_TYPE_INVALID;
-
-  if (G_UNLIKELY (type == G_TYPE_INVALID))
-    {
-      static const GTypeInfo info =
-      {
-        sizeof (XfwmSettingsClass),
-        NULL,
-        NULL,
-        (GClassInitFunc) xfwm_settings_class_init,
-        NULL,
-        NULL,
-        sizeof (XfwmSettings),
-        0,
-        (GInstanceInitFunc) xfwm_settings_init,
-        NULL,
-      };
-
-      type = g_type_register_static (G_TYPE_OBJECT, "XfwmSettings", &info, 0);
-    }
-
-  return type;
-}
-
-
 
 static void
-xfwm_settings_class_init (XfwmSettingsClass *klass, gpointer data)
+xfwm_settings_class_init (XfwmSettingsClass *klass)
 {
   GObjectClass *gobject_class;
-
-  g_type_class_add_private (klass, sizeof (XfwmSettingsPrivate));
-
-  /* Determine the parent type class */
-  xfwm_settings_parent_class = g_type_class_peek_parent (klass);
 
   gobject_class = G_OBJECT_CLASS (klass);
   gobject_class->constructed = xfwm_settings_constructed;
@@ -310,9 +267,9 @@ xfwm_settings_class_init (XfwmSettingsClass *klass, gpointer data)
 
 
 static void
-xfwm_settings_init (XfwmSettings *settings, gpointer data)
+xfwm_settings_init (XfwmSettings *settings)
 {
-  settings->priv = XFWM_SETTINGS_GET_PRIVATE (settings);
+  settings->priv = xfwm_settings_get_instance_private (settings);
 
   settings->priv->builder = NULL;
   settings->priv->provider = xfce_shortcuts_provider_new ("xfwm4");
@@ -530,6 +487,7 @@ xfwm_settings_constructed (GObject *object)
 
   /* Keyboard tab: Shortcuts tree view */
   {
+    GtkTreeViewColumn * column = NULL;
     gtk_tree_selection_set_mode (gtk_tree_view_get_selection (GTK_TREE_VIEW (shortcuts_treeview)),
                                  GTK_SELECTION_MULTIPLE);
 
@@ -538,14 +496,20 @@ xfwm_settings_constructed (GObject *object)
     g_object_unref (G_OBJECT (list_store));
 
     renderer = gtk_cell_renderer_text_new ();
-    gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (shortcuts_treeview),
-                                                 0, _("Action"), renderer,
-                                                 "text", SHORTCUTS_NAME_COLUMN, NULL);
+    column = gtk_tree_view_column_new_with_attributes (_("Action"), renderer,
+                                                 "text", SHORTCUTS_NAME_COLUMN,
+                                                 NULL);
+    gtk_tree_view_insert_column (GTK_TREE_VIEW (shortcuts_treeview), column, 0);
+    gtk_tree_view_column_set_sort_column_id (column, SHORTCUTS_NAME_COLUMN);
 
     renderer = gtk_cell_renderer_text_new ();
-    gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (shortcuts_treeview),
-                                                 1, _("Shortcut"), renderer,
-                                                 "text", SHORTCUTS_SHORTCUT_LABEL_COLUMN, NULL);
+    column = gtk_tree_view_column_new_with_attributes (_("Shortcut"), renderer,
+                                                 "text", SHORTCUTS_SHORTCUT_LABEL_COLUMN,
+                                                 NULL);
+    gtk_tree_view_insert_column (GTK_TREE_VIEW (shortcuts_treeview), column, 1);
+    gtk_tree_view_column_set_sort_column_id (column, SHORTCUTS_SHORTCUT_LABEL_COLUMN);
+
+    /* Initial sorting: By category; given by the model */
 
     g_signal_connect (shortcuts_treeview, "row-activated",
                       G_CALLBACK (xfwm_settings_shortcut_row_activated), settings);

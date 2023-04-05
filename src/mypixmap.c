@@ -46,6 +46,7 @@
 #include <libxfce4util/libxfce4util.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "mypixmap.h"
 #include "xpm-color-table.h"
@@ -271,7 +272,7 @@ xpm_read_string (FILE *infile, gchar **buffer, guint *buffer_size)
     if (buf == NULL)
     {
         bufsiz = 10 * sizeof (gchar);
-        buf = g_new (gchar, bufsiz);
+        buf = g_new0 (gchar, bufsiz);
     }
 
     do
@@ -336,6 +337,15 @@ search_color_symbol (gchar *symbol, xfwmColorSymbol *color_sym)
         ++i;
     }
     return NULL;
+}
+
+static void
+safe_strncpy (char *dst, const char *src, size_t size)
+{
+    size_t len = strnlen (src, size);
+    memcpy (dst, src, len);
+    /* Add NULL terminator */
+    dst[len] = '\0';
 }
 
 static gchar *
@@ -438,7 +448,7 @@ xpm_extract_color (const gchar *buffer, xfwmColorSymbol *color_sym)
             if (new_color)
             {
                 current_key = key;
-                strcpy (current_color, new_color);
+                safe_strncpy (current_color, new_color, sizeof (current_color) - 1);
             }
             space = 128;
             color[0] = '\0';
@@ -453,7 +463,7 @@ xpm_extract_color (const gchar *buffer, xfwmColorSymbol *color_sym)
             if (key > current_key)
             {
                 current_key = key;
-                strcpy (current_color, color);
+                safe_strncpy (current_color, color, sizeof (current_color) - 1);
             }
             space = 128;
             color[0] = '\0';
@@ -559,14 +569,14 @@ pixbuf_create_from_xpm (gpointer handle, xfwmColorSymbol *color_sym)
     /* The hash is used for fast lookups of color from chars */
     color_hash = g_hash_table_new (g_str_hash, g_str_equal);
 
-    name_buf = g_try_malloc (n_col * (cpp + 1));
+    name_buf = g_try_malloc0 (n_col * (cpp + 1));
     if (!name_buf) {
         g_hash_table_destroy (color_hash);
         g_warning ("Cannot allocate buffer");
         return NULL;
     }
 
-    colors = (XPMColor *) g_try_malloc (sizeof (XPMColor) * n_col);
+    colors = (XPMColor *) g_try_malloc0 (sizeof (XPMColor) * n_col);
     if (!colors)
     {
         g_hash_table_destroy (color_hash);
@@ -715,10 +725,14 @@ static void
 xfwmPixmapRefreshPict (xfwmPixmap * pm)
 {
     ScreenInfo * screen_info;
+    DisplayInfo *display_info;
 
     TRACE ("pixmap %p", pm);
 
     screen_info = pm->screen_info;
+    display_info = screen_info->display_info;
+    myDisplayErrorTrapPush (display_info);
+
     if (!pm->pict_format)
     {
         pm->pict_format = XRenderFindVisualFormat (myScreenGetXDisplay (screen_info),
@@ -736,6 +750,8 @@ xfwmPixmapRefreshPict (xfwmPixmap * pm)
         pm->pict = XRenderCreatePicture (myScreenGetXDisplay (screen_info),
                                          pm->pixmap, pm->pict_format, 0, NULL);
     }
+
+    myDisplayErrorTrapPopIgnored (display_info);
 }
 #endif
 
@@ -882,7 +898,7 @@ xfwmPixmapDrawFromGdkPixbuf (xfwmPixmap * pm, GdkPixbuf *pixbuf)
         }
 
         cairo_set_operator (cr, CAIRO_OPERATOR_SOURCE);
-        cairo_set_source_rgba (cr, 0, 0, 0, 1);
+        cairo_set_source_rgba (cr, 1, 1, 1, 1);
         cairo_fill (cr);
     }
     else

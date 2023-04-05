@@ -231,7 +231,7 @@ loadXfconfData (ScreenInfo *screen_info, Settings *rc)
                 g_value_unset(rc[i].value);
                 g_free(rc[i].value);
             }
-            rc[i].value = g_new0(GValue, 1);
+            rc[i].value = g_new0 (GValue, 1);
 
             if(!xfconf_channel_get_property(screen_info->xfwm4_channel, property_name, rc[i].value))
             {
@@ -470,6 +470,7 @@ loadTheme (ScreenInfo *screen_info, Settings *rc)
     {
         screen_info->font_desc = pango_font_description_from_string (font);
     }
+    myScreenUpdateFontAttr (screen_info);
 
     gdk_rgba_parse (&screen_info->title_colors[ACTIVE], getStringValue ("active_text_color", rc));
     gdk_rgba_parse (&screen_info->title_colors[INACTIVE], getStringValue ("inactive_text_color", rc));
@@ -676,6 +677,7 @@ loadSettings (ScreenInfo *screen_info)
         {"cycle_raise", NULL, G_TYPE_BOOLEAN, TRUE},
         {"cycle_hidden", NULL, G_TYPE_BOOLEAN, TRUE},
         {"cycle_minimum", NULL, G_TYPE_BOOLEAN, TRUE},
+        {"cycle_minimized", NULL, G_TYPE_BOOLEAN, TRUE},
         {"cycle_preview", NULL, G_TYPE_BOOLEAN, TRUE},
         {"cycle_tabwin_mode", NULL, G_TYPE_INT, FALSE},
         {"cycle_workspaces", NULL, G_TYPE_BOOLEAN, TRUE},
@@ -744,6 +746,7 @@ loadSettings (ScreenInfo *screen_info)
         {"wrap_windows", NULL, G_TYPE_BOOLEAN, TRUE},
         {"wrap_workspaces", NULL, G_TYPE_BOOLEAN, TRUE},
         {"zoom_desktop", NULL, G_TYPE_BOOLEAN, TRUE},
+        {"zoom_pointer", NULL, G_TYPE_BOOLEAN, TRUE},
         {NULL, NULL, G_TYPE_INVALID, FALSE}
     };
 
@@ -770,6 +773,8 @@ loadSettings (ScreenInfo *screen_info)
         getBoolValue ("cycle_apps_only", rc);
     screen_info->params->cycle_minimum =
         getBoolValue ("cycle_minimum", rc);
+    screen_info->params->cycle_minimized =
+        getBoolValue ("cycle_minimized", rc);
     screen_info->params->cycle_draw_frame =
         getBoolValue ("cycle_draw_frame", rc);
     screen_info->params->cycle_raise =
@@ -848,6 +853,8 @@ loadSettings (ScreenInfo *screen_info)
         getBoolValue ("wrap_workspaces", rc);
     screen_info->params->zoom_desktop =
         getBoolValue ("zoom_desktop", rc);
+    screen_info->params->zoom_pointer =
+        getBoolValue ("zoom_pointer", rc);
 
     screen_info->params->wrap_layout =
         getBoolValue ("wrap_layout", rc);
@@ -889,6 +896,10 @@ loadSettings (ScreenInfo *screen_info)
     else if (!g_ascii_strcasecmp ("fill", value))
     {
         screen_info->params->double_click_action = DOUBLE_CLICK_ACTION_FILL;
+    }
+    else if (!g_ascii_strcasecmp ("above", value))
+    {
+        screen_info->params->double_click_action = DOUBLE_CLICK_ACTION_ABOVE;
     }
     else
     {
@@ -1299,6 +1310,10 @@ cb_xfwm4_channel_property_changed(XfconfChannel *channel, const gchar *property_
                 {
                     screen_info->params->zoom_desktop = g_value_get_boolean (value);
                 }
+                else if (!strcmp (name, "zoom_pointer"))
+                {
+                    screen_info->params->zoom_pointer = g_value_get_boolean (value);
+                }
                 else if (!strcmp (name, "wrap_windows"))
                 {
                     screen_info->params->wrap_windows = g_value_get_boolean (value);
@@ -1316,6 +1331,10 @@ cb_xfwm4_channel_property_changed(XfconfChannel *channel, const gchar *property_
                 else if (!strcmp (name, "cycle_minimum"))
                 {
                     screen_info->params->cycle_minimum = g_value_get_boolean (value);
+                }
+                else if (!strcmp (name, "cycle_minimized"))
+                {
+                    screen_info->params->cycle_minimized = g_value_get_boolean (value);
                 }
                 else if (!strcmp (name, "cycle_draw_frame"))
                 {
@@ -1439,7 +1458,7 @@ cb_xfwm4_channel_property_changed(XfconfChannel *channel, const gchar *property_
 static gboolean
 keymap_reload (gpointer data)
 {
-    ScreenInfo *screen_info = (ScreenInfo *) data;
+    ScreenInfo *screen_info = data;
 
     g_return_val_if_fail (screen_info != NULL, FALSE);
     TRACE ("entering");
@@ -1473,8 +1492,8 @@ cb_keys_changed (GdkKeymap *keymap, ScreenInfo *screen_info)
     }
     keymap_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT,
                                          KEYMAP_UPDATE_TIMEOUT,
-                                         (GSourceFunc) keymap_reload,
-                                         (gpointer) screen_info, NULL);
+                                         keymap_reload,
+                                         screen_info, NULL);
 }
 
 static void

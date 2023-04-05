@@ -53,7 +53,7 @@ clientApplyStackList (ScreenInfo *screen_info)
     nwindows = g_list_length (screen_info->windows_stack);
 
     i = 0;
-    xwinstack = g_new (Window, nwindows + 4);
+    xwinstack = g_new0 (Window, nwindows + 4);
     xwinstack[i++] = MYWINDOW_XWINDOW (screen_info->sidewalk[0]);
     xwinstack[i++] = MYWINDOW_XWINDOW (screen_info->sidewalk[1]);
     xwinstack[i++] = MYWINDOW_XWINDOW (screen_info->sidewalk[2]);
@@ -72,7 +72,9 @@ clientApplyStackList (ScreenInfo *screen_info)
         }
     }
 
+    myDisplayErrorTrapPush (screen_info->display_info);
     XRestackWindows (myScreenGetXDisplay (screen_info), xwinstack, (int) nwindows + 4);
+    myDisplayErrorTrapPopIgnored (screen_info->display_info);
 
     g_free (xwinstack);
 }
@@ -571,8 +573,8 @@ clientAdjustFullscreenLayer (Client *c, gboolean set)
     {
         if (FLAG_TEST(c->flags, CLIENT_FLAG_FULLSCREEN))
         {
-            TRACE ("Moving \"%s\" (0x%lx) to initial layer %d", c->name, c->window, c->fullscreen_old_layer);
-            clientSetLayer (c, c->fullscreen_old_layer);
+            TRACE ("Moving \"%s\" (0x%lx) to initial layer %d", c->name, c->window, c->pre_fullscreen_layer);
+            clientSetLayer (c, c->pre_fullscreen_layer);
             return TRUE;
         }
     }
@@ -728,7 +730,7 @@ clientResetDelayedRaise (ScreenInfo *screen_info)
     }
     raise_timeout = g_timeout_add_full (G_PRIORITY_DEFAULT,
                                         screen_info->params->raise_delay,
-                                        (GSourceFunc) delayed_raise_cb,
+                                        delayed_raise_cb,
                                         NULL, NULL);
 }
 

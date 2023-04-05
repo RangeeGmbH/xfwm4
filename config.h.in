@@ -108,6 +108,9 @@
 /* Define to enable XI2 */
 #undef HAVE_XI2
 
+/* Define to enable XRes */
+#undef HAVE_XRES
+
 /* Define to enable xsync */
 #undef HAVE_XSYNC
 

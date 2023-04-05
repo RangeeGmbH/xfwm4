@@ -17,7 +17,7 @@
 
 
         oroborus - (c) 2001 Ken Lynch
-        xfwm4    - (c) 2002-2015 Olivier Fourdan
+        xfwm4    - (c) 2002-2020 Olivier Fourdan
 
  */
 
@@ -138,7 +138,7 @@ typeOfClick_end (gpointer data)
 {
     XfwmButtonClickData *passdata;
 
-    passdata = (XfwmButtonClickData *) data;
+    passdata = data;
     if (passdata->timeout)
     {
         g_source_remove (passdata->timeout);
@@ -159,7 +159,7 @@ typeOfClick_event_filter (XfwmEvent *event, gpointer data)
     gboolean keep_going;
 
     keep_going = TRUE;
-    passdata = (XfwmButtonClickData *) data;
+    passdata = data;
     status = EVENT_FILTER_CONTINUE;
 
     /* Update the display time */
@@ -238,11 +238,7 @@ typeOfClick (ScreenInfo *screen_info, Window w, XfwmEventButton *event, gboolean
     if (!g)
     {
         TRACE ("grab failed");
-#if GTK_CHECK_VERSION(3, 22, 0)
         gdk_display_beep (display_info->gdisplay);
-#else
-        gdk_beep ();
-#endif
         myScreenUngrabPointer (screen_info, event->time);
         return XFWM_BUTTON_UNDEFINED;
     }
@@ -264,8 +260,8 @@ typeOfClick (ScreenInfo *screen_info, Window w, XfwmEventButton *event, gboolean
                                                    display_info->double_click_distance);
     passdata.timeout = g_timeout_add_full (G_PRIORITY_HIGH,
                                            display_info->double_click_time,
-                                           (GSourceFunc) typeOfClick_end,
-                                           (gpointer) &passdata, NULL);
+                                           typeOfClick_end,
+                                           &passdata, NULL);
 
     TRACE ("entering loop");
     eventFilterPush (display_info->xfilter, typeOfClick_event_filter, &passdata);
@@ -433,44 +429,28 @@ handleKeyPress (DisplayInfo *display_info, XfwmEventKey *event)
                 clientFill (c, CLIENT_FILL_HORIZ);
                 break;
             case KEY_TILE_DOWN:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_DOWN, TRUE, TRUE);
+                clientToggleTile (c, TILE_DOWN);
                 break;
             case KEY_TILE_LEFT:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_LEFT, TRUE, TRUE);
+                clientToggleTile (c, TILE_LEFT);
                 break;
             case KEY_TILE_RIGHT:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_RIGHT, TRUE, TRUE);
+                clientToggleTile (c, TILE_RIGHT);
                 break;
             case KEY_TILE_UP:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_UP, TRUE, TRUE);
+                clientToggleTile (c, TILE_UP);
                 break;
             case KEY_TILE_DOWN_LEFT:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_DOWN_LEFT, TRUE, TRUE);
+                clientToggleTile (c, TILE_DOWN_LEFT);
                 break;
             case KEY_TILE_DOWN_RIGHT:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_DOWN_RIGHT, TRUE, TRUE);
+                clientToggleTile (c, TILE_DOWN_RIGHT);
                 break;
             case KEY_TILE_UP_LEFT:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_UP_LEFT, TRUE, TRUE);
+                clientToggleTile (c, TILE_UP_LEFT);
                 break;
             case KEY_TILE_UP_RIGHT:
-                clientTile (c, frameX (c) + frameWidth (c) / 2,
-                               frameY (c) + frameHeight (c) / 2,
-                               TILE_UP_RIGHT, TRUE, TRUE);
+                clientToggleTile (c, TILE_UP_RIGHT);
                 break;
             default:
                 break;
@@ -766,6 +746,9 @@ button1Action (Client *c, XfwmEventButton *event)
                     clientWithdraw (c, c->win_workspace, TRUE);
                 }
                 break;
+            case DOUBLE_CLICK_ACTION_ABOVE:
+                clientToggleLayerAbove (c);
+                break;
             default:
                 break;
         }
@@ -1012,43 +995,35 @@ handleButtonPress (DisplayInfo *display_info, XfwmEventButton *event)
                 }
             }
         }
-        else if ((win == MYWINDOW_XWINDOW (c->corners[CORNER_TOP_LEFT]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->corners[CORNER_TOP_LEFT]))
         {
             edgeButton (c, CORNER_TOP_LEFT, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->corners[CORNER_TOP_RIGHT]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->corners[CORNER_TOP_RIGHT]))
         {
             edgeButton (c, CORNER_TOP_RIGHT, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->corners[CORNER_BOTTOM_LEFT]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->corners[CORNER_BOTTOM_LEFT]))
         {
             edgeButton (c, CORNER_BOTTOM_LEFT, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->corners[CORNER_BOTTOM_RIGHT]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->corners[CORNER_BOTTOM_RIGHT]))
         {
             edgeButton (c, CORNER_BOTTOM_RIGHT, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->sides[SIDE_BOTTOM]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->sides[SIDE_BOTTOM]))
         {
             edgeButton (c, CORNER_COUNT + SIDE_BOTTOM, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->sides[SIDE_TOP]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->sides[SIDE_TOP]))
         {
             edgeButton (c, CORNER_COUNT + SIDE_TOP, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->sides[SIDE_LEFT]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->sides[SIDE_LEFT]))
         {
             edgeButton (c, CORNER_COUNT + SIDE_LEFT, event);
         }
-        else if ((win == MYWINDOW_XWINDOW (c->sides[SIDE_RIGHT]))
-            && (state == 0))
+        else if (win == MYWINDOW_XWINDOW (c->sides[SIDE_RIGHT]))
         {
             edgeButton (c, CORNER_COUNT + SIDE_RIGHT, event);
         }
@@ -1621,6 +1596,7 @@ handleFocusIn (DisplayInfo *display_info, XFocusChangeEvent * ev)
         }
     }
 
+
     return EVENT_FILTER_REMOVE;
 }
 
@@ -1725,7 +1701,10 @@ handlePropertyNotify (DisplayInfo *display_info, XPropertyEvent * ev)
                 XFree (c->wmhints);
             }
 
+            myDisplayErrorTrapPush (display_info);
             c->wmhints = XGetWMHints (display_info->dpy, c->window);
+            myDisplayErrorTrapPopIgnored (display_info);
+
             if (c->wmhints)
             {
                 if (c->wmhints->flags & WindowGroupHint)
@@ -1804,11 +1783,12 @@ handlePropertyNotify (DisplayInfo *display_info, XPropertyEvent * ev)
         }
         else if (ev->atom == display_info->atoms[NET_WM_PID])
         {
-            long pid;
             TRACE ("client \"%s\" (0x%lx) has received a NET_WM_PID notify", c->name, c->window);
-            getHint (display_info, c->window, NET_WM_PID, (long *) &pid);
-            c->pid = (GPid) pid;
-            TRACE ("client \"%s\" (0x%lx) updated PID = %i", c->name, c->window, c->pid);
+            if (c->pid == 0)
+            {
+                c->pid = getWindowPID (display_info, c->window);
+                TRACE ("client \"%s\" (0x%lx) updated PID = %i", c->name, c->window, c->pid);
+            }
         }
         else if (ev->atom == display_info->atoms[NET_WM_WINDOW_OPACITY])
         {
@@ -1842,7 +1822,14 @@ handlePropertyNotify (DisplayInfo *display_info, XPropertyEvent * ev)
             TRACE ("client \"%s\" (0x%lx) has received a GTK_FRAME_EXTENTS notify", c->name, c->window);
             if (clientGetGtkFrameExtents (c))
             {
-                clientUpdateMaximizeSize (c);
+                if (FLAG_TEST (c->flags, CLIENT_FLAG_MAXIMIZED))
+                {
+                    clientUpdateMaximizeSize (c);
+                }
+                else if (c->tile_mode != TILE_NONE)
+                {
+                    clientUpdateTileSize (c);
+                }
             }
         }
         else if (ev->atom == display_info->atoms[GTK_HIDE_TITLEBAR_WHEN_MAXIMIZED])
@@ -2434,11 +2421,7 @@ menu_callback (Menu * menu, MenuOp op, Window xid, gpointer menu_data, gpointer 
     }
     else
     {
-#if GTK_CHECK_VERSION(3, 22, 0)
         gdk_display_beep (gdk_display_get_default ());
-#else
-        gdk_beep ();
-#endif
     }
     menu_free (menu);
 }
@@ -2476,9 +2459,7 @@ show_window_menu (Client *c, gint px, gint py, guint button, guint32 timestamp, 
     screen_info = c->screen_info;
     display_info = screen_info->display_info;
     is_transient = clientIsValidTransientOrModal (c);
-#if GTK_CHECK_VERSION(3, 22, 0)
     scale = gdk_window_get_scale_factor (gdk_screen_get_root_window (screen_info->gscr));
-#endif
 
     x = px;
     y = py;
@@ -2611,7 +2592,9 @@ show_window_menu (Client *c, gint px, gint py, guint button, guint32 timestamp, 
         ops |= MENU_OP_ABOVE | MENU_OP_BELOW;
     }
 
-    if (is_transient || FLAG_TEST (c->flags, CLIENT_FLAG_FULLSCREEN))
+    if (is_transient ||
+        !(c->type & WINDOW_REGULAR_FOCUSABLE) ||
+        FLAG_TEST (c->flags, CLIENT_FLAG_FULLSCREEN))
     {
         insensitive |= MENU_OP_NORMAL | MENU_OP_ABOVE | MENU_OP_BELOW;
     }
@@ -2668,11 +2651,7 @@ show_window_menu (Client *c, gint px, gint py, guint button, guint32 timestamp, 
     if (!menu_popup (menu, x, y, button, timestamp))
     {
         TRACE ("cannot open menu");
-#if GTK_CHECK_VERSION(3, 22, 0)
         gdk_display_beep (display_info->gdisplay);
-#else
-        gdk_beep ();
-#endif
         c->button_status[MENU_BUTTON] = BUTTON_STATE_NORMAL;
         frameQueueDraw (c, FALSE);
         xfwmWindowDelete (&menu_event_window);
@@ -2755,6 +2734,13 @@ cursor_theme_cb (GObject * obj, GParamSpec * pspec, gpointer data)
    }
 }
 
+static void
+update_screen_font (ScreenInfo *screen_info)
+{
+    myScreenUpdateFontAttr (screen_info);
+    clientUpdateAllFrames (screen_info, UPDATE_FRAME);
+}
+
 static gboolean
 refresh_font_cb (GObject * obj, GdkEvent * ev, gpointer data)
 {
@@ -2766,8 +2752,7 @@ refresh_font_cb (GObject * obj, GdkEvent * ev, gpointer data)
 
     for (list = display_info->screens; list; list = g_slist_next (list))
     {
-        ScreenInfo *screen_info = (ScreenInfo *) list->data;
-        clientUpdateAllFrames (screen_info, UPDATE_FRAME);
+        update_screen_font (list->data);
     }
 
     return (TRUE);
@@ -2890,6 +2875,11 @@ initPerScreenCallbacks (ScreenInfo *screen_info)
                       "signal::monitors-changed",
                       G_CALLBACK(monitors_changed_cb), (gpointer) (screen_info),
                       NULL);
+
+    g_signal_connect_swapped (G_OBJECT (myScreenGetGtkWidget (screen_info)),
+                              "notify::scale-factor",
+                              G_CALLBACK (update_screen_font),
+                              screen_info);
 }
 
 void

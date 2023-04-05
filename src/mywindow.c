@@ -80,11 +80,19 @@ xfwmWindowInit (xfwmWindow * win)
 void
 xfwmWindowSetCursor (xfwmWindow * win, Cursor cursor)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
+
     g_return_if_fail (win != NULL);
+
+    screen_info = win->screen_info;
+    display_info = screen_info->display_info;
 
     if ((win->window != None) && (cursor != None))
     {
-        XDefineCursor (myScreenGetXDisplay (win->screen_info), win->window, cursor);
+        myDisplayErrorTrapPush (display_info);
+        XDefineCursor (myScreenGetXDisplay (screen_info), win->window, cursor);
+        myDisplayErrorTrapPopIgnored (display_info);
     }
 }
 
@@ -149,6 +157,9 @@ void
 xfwmWindowShow (xfwmWindow * win, int x, int y, int width, int height,
     gboolean refresh)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
+
     TRACE ("win %p (0x%lx) at (%i,%i) [%i×%i]", win, win->window, x, y, width, height);
 
     if (!(win->window))
@@ -160,9 +171,14 @@ xfwmWindowShow (xfwmWindow * win, int x, int y, int width, int height,
         xfwmWindowHide (win);
         return;
     }
+
+    screen_info = win->screen_info;
+    display_info = screen_info->display_info;
+    myDisplayErrorTrapPush (display_info);
+
     if (!(win->map))
     {
-        XMapWindow (myScreenGetXDisplay (win->screen_info),
+        XMapWindow (myScreenGetXDisplay (screen_info),
                     win->window);
         win->map = TRUE;
     }
@@ -170,7 +186,7 @@ xfwmWindowShow (xfwmWindow * win, int x, int y, int width, int height,
     if (((x != win->x) || (y != win->y)) && ((width != win->width)
             || (height != win->height)))
     {
-        XMoveResizeWindow (myScreenGetXDisplay (win->screen_info),
+        XMoveResizeWindow (myScreenGetXDisplay (screen_info),
                            win->window, x, y,
                            (unsigned int) width,
                            (unsigned int) height);
@@ -181,12 +197,12 @@ xfwmWindowShow (xfwmWindow * win, int x, int y, int width, int height,
     }
     else if ((x != win->x) || (y != win->y))
     {
-        XMoveWindow (myScreenGetXDisplay (win->screen_info),
+        XMoveWindow (myScreenGetXDisplay (screen_info),
                      win->window,
                      x, y);
         if (refresh)
         {
-            XClearWindow (myScreenGetXDisplay (win->screen_info),
+            XClearWindow (myScreenGetXDisplay (screen_info),
                           win->window);
         }
         win->x = x;
@@ -194,7 +210,7 @@ xfwmWindowShow (xfwmWindow * win, int x, int y, int width, int height,
     }
     else if ((width != win->width) || (height != win->height))
     {
-        XResizeWindow (myScreenGetXDisplay (win->screen_info),
+        XResizeWindow (myScreenGetXDisplay (screen_info),
                        win->window,
                        (unsigned int) width,
                        (unsigned int) height);
@@ -203,9 +219,10 @@ xfwmWindowShow (xfwmWindow * win, int x, int y, int width, int height,
     }
     else if (refresh)
     {
-        XClearWindow (myScreenGetXDisplay (win->screen_info),
+        XClearWindow (myScreenGetXDisplay (screen_info),
                       win->window);
     }
+    myDisplayErrorTrapPopIgnored (display_info);
 }
 
 void
@@ -246,6 +263,10 @@ xfwmWindowTemp (ScreenInfo *screen_info, Visual *visual,
                 gboolean bottom)
 {
     XSetWindowAttributes attributes;
+    DisplayInfo *display_info;
+
+    display_info = screen_info->display_info;
+    myDisplayErrorTrapPush (display_info);
 
     attributes.event_mask = eventmask;
     attributes.override_redirect = TRUE;
@@ -276,6 +297,7 @@ xfwmWindowTemp (ScreenInfo *screen_info, Visual *visual,
                                           screen_info->display_info->dpy,
                                           win->window, eventmask);
 #endif
+    myDisplayErrorTrapPopIgnored (display_info);
 }
 
 #ifdef HAVE_RENDER
@@ -333,6 +355,8 @@ xfwmWindowCopyComposite (xfwmWindow * win, xfwmPixmap * pix)
 void
 xfwmWindowSetBG (xfwmWindow * win, xfwmPixmap * pix)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
     gboolean done;
 
     if ((win->width < 1) || (win->height < 1) || (pix->width < 1) || (pix->height < 1))
@@ -340,10 +364,14 @@ xfwmWindowSetBG (xfwmWindow * win, xfwmPixmap * pix)
         return;
     }
 
+    screen_info = win->screen_info;
+    display_info = screen_info->display_info;
+    myDisplayErrorTrapPush (display_info);
+
     done = FALSE;
 #ifdef HAVE_RENDER
-    if ((win->visual != win->screen_info->visual) ||
-        (win->depth  != win->screen_info->depth))
+    if ((win->visual != screen_info->visual) ||
+        (win->depth  != screen_info->depth))
     {
         /* Try to use Render */
         done = xfwmWindowCopyComposite (win, pix);
@@ -353,6 +381,8 @@ xfwmWindowSetBG (xfwmWindow * win, xfwmPixmap * pix)
     if (!done)
     {
         /* Use the good old way */
-        XSetWindowBackgroundPixmap (myScreenGetXDisplay (win->screen_info), win->window, pix->pixmap);
+        XSetWindowBackgroundPixmap (myScreenGetXDisplay (screen_info), win->window, pix->pixmap);
     }
+
+    myDisplayErrorTrapPopIgnored (display_info);
 }

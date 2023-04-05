@@ -573,9 +573,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu themes/default-xhdpi/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign themes/default-xhdpi/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu themes/default-xhdpi/Makefile
+	  $(AUTOMAKE) --foreign themes/default-xhdpi/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \

@@ -18,7 +18,7 @@
 
         oroborus - (c) 2001 Ken Lynch
         Metacity - (c) 2001 Havoc Pennington
-        xfwm4    - (c) 2002-2015 Olivier Fourdan
+        xfwm4    - (c) 2002-2020 Olivier Fourdan
 
  */
 
@@ -297,5 +297,11 @@ gboolean                 getWindowStartupId                     (DisplayInfo *,
                                                                  Window,
                                                                  char **);
 #endif
+
+GPid                     getWindowPID                           (DisplayInfo *,
+                                                                 Window);
+unsigned int             getOpaqueRegionRects                   (DisplayInfo *,
+                                                                 Window,
+                                                                 XRectangle **);
 
 #endif /* INC_HINTS_H */

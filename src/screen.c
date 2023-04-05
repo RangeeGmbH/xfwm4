@@ -102,8 +102,8 @@ myScreenSetWMAtom (ScreenInfo *screen_info, gboolean replace_wm)
     {
         if (!replace_wm)
         {
-            g_message ("Another Window Manager (%s) is already running on screen %s", wm_name, display_name);
-            g_message ("To replace the current window manager, try \"--replace\"");
+            g_print ("Another Window Manager (%s) is already running on screen %s\n", wm_name, display_name);
+            g_print ("To replace the current window manager, try \"--replace\"\n");
             g_free (display_name);
 
             return FALSE;
@@ -677,6 +677,27 @@ myScreenComputeSize (ScreenInfo *screen_info)
     return changed;
 }
 
+gboolean
+myScreenHasPrimaryMonitor (ScreenInfo *screen_info, Window w)
+{
+#ifdef HAVE_RANDR
+  Display *display;
+  RROutput primary;
+
+  primary = None;
+  display = myScreenGetXDisplay (screen_info);
+
+  g_return_val_if_fail (display, FALSE);
+
+  if (screen_info->display_info->have_xrandr)
+    primary = XRRGetOutputPrimary (display, w);
+
+  if (primary != None)
+    return TRUE;
+#endif /* HAVE_RANDR */
+  return FALSE;
+}
+
 gint
 myScreenGetNumMonitors (ScreenInfo *screen_info)
 {
@@ -864,3 +885,20 @@ myScreenGetFontDescription (ScreenInfo *screen_info)
     widget = myScreenGetGtkWidget (screen_info);
     return getUIPangoFontDesc (widget);
 }
+
+void
+myScreenUpdateFontAttr (ScreenInfo *screen_info)
+{
+    PangoAttribute *attr;
+    GtkWidget *widget;
+    gint scale;
+
+    g_clear_pointer (&screen_info->pango_attr_list, pango_attr_list_unref);
+
+    widget = myScreenGetGtkWidget (screen_info);
+    scale = gtk_widget_get_scale_factor (widget);
+    screen_info->pango_attr_list = pango_attr_list_new ();
+    attr = pango_attr_scale_new (scale);
+    pango_attr_list_insert (screen_info->pango_attr_list, attr);
+}
+

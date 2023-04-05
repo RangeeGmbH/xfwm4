@@ -7,7 +7,8 @@ EXTRA_DIST =								\
 	intltool-extract.in						\
 	intltool-merge.in						\
 	intltool-update.in						\
-	COMPOSITOR
+	COMPOSITOR							\
+	README.md
 
 DISTCLEANFILES =							\
 	intltool-extract						\
@@ -26,25 +27,6 @@ SUBDIRS = 								\
 
 distclean-local:
 	rm -rf *.cache
-
-html: Makefile
-	make -C doc html
-
-dist-bz2: dist
-	zcat $(PACKAGE)-$(VERSION).tar.gz | \
-	 bzip2 --best -c > $(PACKAGE)-$(VERSION).tar.bz2
-
-distcheck-bz2: distcheck
-	zcat $(PACKAGE)-$(VERSION).tar.gz | \
-	 bzip2 --best -c > $(PACKAGE)-$(VERSION).tar.bz2
-
-snapshot: dist
-	mv $(PACKAGE)-$(VERSION).tar.gz \
-	$(PACKAGE)-$(VERSION)-r@REVISION@.tar.gz
-
-snapshot-bz2: dist-bz2
-	mv $(PACKAGE)-$(VERSION).tar.bz2 \
-	$(PACKAGE)-$(VERSION)-r@REVISION@.tar.bz2
 
 .PHONY: ChangeLog
 

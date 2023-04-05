@@ -134,7 +134,7 @@ escape_quote (gchar * s)
     }
 
     /* Or else, allocate memory for the new string */
-    ns = g_new (gchar, lg + nbquotes + 1);
+    ns = g_new0 (gchar, lg + nbquotes + 1);
     /* And prepend a backslash before any quote found in string */
     idx1 = s;
     idx2 = ns;
@@ -173,7 +173,7 @@ unescape_quote (gchar * s)
 
     lg = strlen (s);
     backslash = FALSE;
-    ns = g_new (gchar, lg + 1);
+    ns = g_new0 (gchar, lg + 1);
     idx1 = s;
     idx2 = ns;
     while (*idx1)
@@ -250,7 +250,7 @@ getsubstring (gchar * s, gint * length)
         lg++;
         (*length)++;
     }
-    ns = g_new (gchar, lg + 1);
+    ns = g_new0 (gchar, lg + 1);
     /* Skip pbrk character */
     end--;
     idx1 = skip;
@@ -358,8 +358,8 @@ sessionSaveScreen (ScreenInfo *screen_info, FILE *f)
 
         fprintf (f, "  [GEOMETRY] (%i,%i,%i,%i)\n", c->x, c->y, c->width,
             c->height);
-        fprintf (f, "  [GEOMETRY-MAXIMIZED] (%i,%i,%i,%i)\n", c->old_x,
-            c->old_y, c->old_width, c->old_height);
+        fprintf (f, "  [GEOMETRY-MAXIMIZED] (%i,%i,%i,%i)\n", c->saved_geometry.x,
+            c->saved_geometry.y, c->saved_geometry.width, c->saved_geometry.height);
         fprintf (f, "  [SCREEN] %i\n", screen_info->screen);
         fprintf (f, "  [DESK] %i\n", c->win_workspace);
         fprintf (f, "  [FLAGS] 0x%lx\n", FLAG_TEST (c->flags,
@@ -498,7 +498,7 @@ sessionLoadWindowStates (const gchar * filename)
             else if (!strcmp (s1, "[WM_COMMAND]"))
             {
                 sscanf (s, "%*s (%i)%n", &matches[num_match - 1].wm_command_count, &pos);
-                matches[num_match - 1].wm_command = g_new (gchar *, matches[num_match - 1].wm_command_count + 1);
+                matches[num_match - 1].wm_command = g_new0 (gchar *, matches[num_match - 1].wm_command_count + 1);
                 for (i = 0; i < matches[num_match - 1].wm_command_count; i++)
                 {
                     gchar *substring;
@@ -702,10 +702,10 @@ sessionMatchWinToSM (Client * c)
             c->y = matches[i].y;
             c->width = matches[i].width;
             c->height = matches[i].height;
-            c->old_x = matches[i].old_x;
-            c->old_y = matches[i].old_y;
-            c->old_width = matches[i].old_width;
-            c->old_height = matches[i].old_height;
+            c->saved_geometry.x = matches[i].old_x;
+            c->saved_geometry.y = matches[i].old_y;
+            c->saved_geometry.width = matches[i].old_width;
+            c->saved_geometry.height = matches[i].old_height;
             c->win_workspace = matches[i].desktop;
             FLAG_SET (c->flags,
                 matches[i].

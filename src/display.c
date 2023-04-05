@@ -16,7 +16,7 @@
         MA 02110-1301, USA.
 
 
-        xfwm4    - (c) 2002-2015 Olivier Fourdan
+        xfwm4    - (c) 2002-2020 Olivier Fourdan
 
  */
 
@@ -38,7 +38,9 @@
 #ifdef HAVE_RENDER
 #include <X11/extensions/Xrender.h>
 #endif
-
+#ifdef HAVE_XRES
+#include <X11/extensions/XRes.h>
+#endif
 #include "spinning_cursor.h"
 #include "display.h"
 #include "screen.h"
@@ -58,20 +60,6 @@
 #endif
 
 static DisplayInfo *default_display;
-
-static int
-handleXError (Display * dpy, XErrorEvent * err)
-{
-#if DEBUG
-    char buf[64];
-
-    XGetErrorText (dpy, err->error_code, buf, 63);
-    fprintf (stderr, "XError: %s\n", buf);
-    fprintf (stderr, "==>  XID 0x%lx, request code %d, serial %lu, error code %d, minor code %d <==\n",
-              err->resourceid, err->request_code, err->serial, err->error_code, err->minor_code);
-#endif
-    return 0;
-}
 
 static gboolean
 myDisplayInitAtoms (DisplayInfo *display_info)
@@ -125,6 +113,7 @@ myDisplayInitAtoms (DisplayInfo *display_info)
         "_NET_WM_ICON_NAME",
         "_NET_WM_MOVERESIZE",
         "_NET_WM_NAME",
+        "_NET_WM_OPAQUE_REGION",
         "_NET_WM_PID",
         "_NET_WM_PING",
         "_NET_WM_WINDOW_OPACITY",
@@ -224,8 +213,6 @@ myDisplayInit (GdkDisplay *gdisplay)
     display->quit = FALSE;
     display->reload = FALSE;
 
-    XSetErrorHandler (handleXError);
-
     /* Initialize internal atoms */
     if (!myDisplayInitAtoms (display))
     {
@@ -323,6 +310,24 @@ myDisplayInit (GdkDisplay *gdisplay)
 #else  /* HAVE_RANDR */
     display->have_xrandr = FALSE;
 #endif /* HAVE_RANDR */
+
+#ifdef HAVE_XRES
+    if (XResQueryExtension (display->dpy,
+                            &display->xres_event_base,
+                            &display->xres_error_base))
+    {
+        display->have_xres = TRUE;
+    }
+    else
+    {
+        g_warning ("The display does not support the XRes extension.");
+        display->have_xres = FALSE;
+        display->xres_event_base = 0;
+        display->xres_error_base = 0;
+    }
+#else  /* HAVE_XRES */
+    display->have_xres = FALSE;
+#endif /* HAVE_XRES */
 
     myDisplayCreateCursor (display);
 
@@ -656,14 +661,19 @@ myDisplayGetScreenFromNum (DisplayInfo *display, int num)
 }
 
 Window
-myDisplayGetRootFromWindow(DisplayInfo *display, Window w)
+myDisplayGetRootFromWindow(DisplayInfo *display_info, Window w)
 {
     XWindowAttributes attributes;
+    int result, status;
 
     g_return_val_if_fail (w != None, None);
-    g_return_val_if_fail (display != NULL, None);
+    g_return_val_if_fail (display_info != NULL, None);
 
-    if (!XGetWindowAttributes(display->dpy, w, &attributes))
+    myDisplayErrorTrapPush (display_info);
+    status = XGetWindowAttributes(display_info->dpy, w, &attributes);
+    result = myDisplayErrorTrapPop (display_info);
+
+    if ((result != Success) || !status)
     {
         TRACE ("no root found for 0x%lx", w);
         return None;
@@ -1029,49 +1039,29 @@ myDisplayTestXrender (DisplayInfo *display, gdouble min_time)
 void
 myDisplayErrorTrapPush (DisplayInfo *display_info)
 {
-#if GTK_CHECK_VERSION(3, 22, 0)
     gdk_x11_display_error_trap_push (display_info->gdisplay);
-#else
-    gdk_error_trap_push ();
-#endif
 }
 
 gint
 myDisplayErrorTrapPop (DisplayInfo *display_info)
 {
-#if GTK_CHECK_VERSION(3, 22, 0)
     return gdk_x11_display_error_trap_pop (display_info->gdisplay);
-#else
-    return gdk_error_trap_pop ();
-#endif
 }
 
 void
 myDisplayErrorTrapPopIgnored (DisplayInfo *display_info)
 {
-#if GTK_CHECK_VERSION(3, 22, 0)
     gdk_x11_display_error_trap_pop_ignored (display_info->gdisplay);
-#else
-    gdk_error_trap_pop_ignored ();
-#endif
 }
 
 void
 myDisplayBeep (DisplayInfo *display_info)
 {
-#if GTK_CHECK_VERSION(3, 22, 0)
     gdk_display_beep (display_info->gdisplay);;
-#else
-    gdk_beep ();
-#endif
 }
 
 GdkKeymap *
 myDisplayGetKeymap (DisplayInfo *display_info)
 {
-#if GTK_CHECK_VERSION(3, 22, 0)
     return gdk_keymap_get_for_display (display_info->gdisplay);
-#else
-    return gdk_keymap_get_default ();
-#endif
 }

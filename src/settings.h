@@ -154,6 +154,7 @@ enum
     DOUBLE_CLICK_ACTION_MAXIMIZE,
     DOUBLE_CLICK_ACTION_SHADE,
     DOUBLE_CLICK_ACTION_FILL,
+    DOUBLE_CLICK_ACTION_ABOVE,
     DOUBLE_CLICK_ACTION_HIDE
 };
 
@@ -212,6 +213,7 @@ struct _XfwmParams
     gboolean cycle_draw_frame;
     gboolean cycle_raise;
     gboolean cycle_hidden;
+    gboolean cycle_minimized;
     gboolean cycle_minimum;
     gboolean cycle_preview;
     gboolean cycle_workspaces;
@@ -245,6 +247,7 @@ struct _XfwmParams
     gboolean wrap_windows;
     gboolean wrap_workspaces;
     gboolean zoom_desktop;
+    gboolean zoom_pointer;
 };
 
 gboolean                 loadSettings                           (ScreenInfo *);

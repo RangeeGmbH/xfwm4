@@ -788,16 +788,17 @@ clientUpdateFullscreenState (Client * c)
 
     if (FLAG_TEST (c->flags, CLIENT_FLAG_FULLSCREEN))
     {
-        c->fullscreen_old_x = c->x;
-        c->fullscreen_old_y = c->y;
-        c->fullscreen_old_width = c->width;
-        c->fullscreen_old_height = c->height;
-        c->fullscreen_old_layer = c->win_layer;
+        c->pre_fullscreen_geometry.x = c->x;
+        c->pre_fullscreen_geometry.y = c->y;
+        c->pre_fullscreen_geometry.width = c->width;
+        c->pre_fullscreen_geometry.height = c->height;
+        c->pre_fullscreen_layer = c->win_layer;
         layer = WIN_LAYER_FULLSCREEN;
+        clientUntile (c);
     }
     else
     {
-        layer = c->fullscreen_old_layer;
+        layer = c->pre_fullscreen_layer;
     }
     clientSetLayer (c, layer);
     clientUpdateFullscreenSize (c);
@@ -972,7 +973,7 @@ clientSetNetClientList (ScreenInfo * screen_info, Atom a, GList * list)
         return;
     }
 
-    listw = g_new (Window, size + 1);
+    listw = g_new0 (Window, size + 1);
     if (listw)
     {
         TRACE ("%i windows in list for %i clients", size, screen_info->client_count);
@@ -1171,10 +1172,13 @@ clientSetNetActions (Client * c)
 
     /* Actions available for all */
     atoms[i++] = display_info->atoms[NET_WM_ACTION_CLOSE];
-    atoms[i++] = display_info->atoms[NET_WM_ACTION_ABOVE];
-    atoms[i++] = display_info->atoms[NET_WM_ACTION_BELOW];
 
     /* Actions depending on the window type and current status */
+    if (c->type & WINDOW_REGULAR_FOCUSABLE)
+    {
+        atoms[i++] = display_info->atoms[NET_WM_ACTION_ABOVE];
+        atoms[i++] = display_info->atoms[NET_WM_ACTION_BELOW];
+    }
     if (FLAG_TEST (c->xfwm_flags, XFWM_FLAG_VISIBLE))
     {
         atoms[i++] = display_info->atoms[NET_WM_ACTION_FULLSCREEN];
@@ -1332,6 +1336,14 @@ clientWindowType (Client * c)
                 XFWM_FLAG_HAS_BORDER | XFWM_FLAG_HAS_HIDE |
                 XFWM_FLAG_HAS_MENU | XFWM_FLAG_HAS_MOVE |
                 XFWM_FLAG_HAS_RESIZE);
+            /* Treat SPLASHSCREEN as transient for group to work around
+             * broken apps placing splashscreens above and then complaining
+             * it hides their dialogs, sigh.
+             */
+            if ((c->transient_for == None) || (!clientGetTransient (c)))
+            {
+                c->transient_for = c->screen_info->xroot;
+            }
         }
         else if (c->type_atom == display_info->atoms[NET_WM_WINDOW_TYPE_NOTIFICATION])
         {
@@ -1446,7 +1458,9 @@ clientHandleNetActiveWindow (Client *c, guint32 timestamp, gboolean source_is_ap
         current_time = myDisplayGetLastUserTime (display_info);
 
         TRACE ("time of event received is %u, current XServer time is %u", (guint32) ev_time, (guint32) current_time);
-        if ((screen_info->params->prevent_focus_stealing) && TIMESTAMP_IS_BEFORE((guint32) ev_time, (guint32) current_time))
+        if ((screen_info->params->prevent_focus_stealing) &&
+            (TIMESTAMP_IS_BEFORE((guint32) ev_time, (guint32) current_time) ||
+             (screen_info->params->activate_action == ACTIVATE_ACTION_NONE)))
         {
             focused = clientGetFocus ();
             /* We do not want to set the demand attention flag if the window is focused though */
@@ -1606,7 +1620,9 @@ clientAddUserTimeWin (Client * c)
 
     if ((c->user_time_win != None) && (c->user_time_win != c->window))
     {
+        myDisplayErrorTrapPush (display_info);
         XSelectInput (display_info->dpy, c->user_time_win, PropertyChangeMask);
+        myDisplayErrorTrapPopIgnored (display_info);
     }
 }
 
@@ -1626,6 +1642,8 @@ clientRemoveUserTimeWin (Client * c)
 
     if ((c->user_time_win != None) && (c->user_time_win != c->window))
     {
+        myDisplayErrorTrapPush (display_info);
         XSelectInput (display_info->dpy, c->user_time_win, NoEventMask);
+        myDisplayErrorTrapPopIgnored (display_info);
     }
 }

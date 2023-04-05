@@ -364,9 +364,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 appiconsdir = $(datadir)/icons/hicolor/scalable/apps
 appicons_DATA = \
-	wmtweaks.svg							\
-	xfce4-workspaces.svg						\
-	xfwm4.svg							\
+	org.xfce.xfwm4-tweaks.svg							\
+	org.xfce.workspaces.svg						\
+	org.xfce.xfwm4.svg							\
 	xfwm4-default.svg
 
 actionsiconsdir = $(datadir)/icons/hicolor/scalable/actions
@@ -394,9 +394,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu icons/scalable/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign icons/scalable/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu icons/scalable/Makefile
+	  $(AUTOMAKE) --foreign icons/scalable/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \

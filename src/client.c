@@ -17,7 +17,7 @@
 
 
         oroborus - (c) 2001 Ken Lynch
-        xfwm4    - (c) 2002-2011 Olivier Fourdan
+        xfwm4    - (c) 2002-2020 Olivier Fourdan
 
  */
 
@@ -123,6 +123,8 @@ clientGetXDisplay (Client *c)
 void
 clientInstallColormaps (Client *c)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
     XWindowAttributes attr;
     gboolean installed;
     int i;
@@ -130,13 +132,18 @@ clientInstallColormaps (Client *c)
     g_return_if_fail (c != NULL);
     TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
 
+    screen_info = c->screen_info;
+    display_info = screen_info->display_info;
+
+    myDisplayErrorTrapPush (display_info);
+
     installed = FALSE;
     if (c->ncmap)
     {
         for (i = c->ncmap - 1; i >= 0; i--)
         {
-            XGetWindowAttributes (clientGetXDisplay (c), c->cmap_windows[i], &attr);
-            XInstallColormap (clientGetXDisplay (c), attr.colormap);
+            XGetWindowAttributes (display_info->dpy, c->cmap_windows[i], &attr);
+            XInstallColormap (display_info->dpy, attr.colormap);
             if (c->cmap_windows[i] == c->window)
             {
                 installed = TRUE;
@@ -145,13 +152,19 @@ clientInstallColormaps (Client *c)
     }
     if ((!installed) && (c->cmap))
     {
-        XInstallColormap (clientGetXDisplay (c), c->cmap);
+        XInstallColormap (display_info->dpy, c->cmap);
     }
+
+    myDisplayErrorTrapPopIgnored (display_info);
 }
 
 void
 clientUpdateColormaps (Client *c)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
+    int result, status;
+
     g_return_if_fail (c != NULL);
     TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
 
@@ -160,7 +173,15 @@ clientUpdateColormaps (Client *c)
         XFree (c->cmap_windows);
         c->ncmap = 0;
     }
-    if (!XGetWMColormapWindows (clientGetXDisplay (c), c->window, &c->cmap_windows, &c->ncmap))
+
+    screen_info = c->screen_info;
+    display_info = screen_info->display_info;
+
+    myDisplayErrorTrapPush (display_info);
+    status = XGetWMColormapWindows (display_info->dpy, c->window,
+                                    &c->cmap_windows, &c->ncmap);
+    result = myDisplayErrorTrapPop (display_info);
+    if ((result != Success) || !status)
     {
         c->cmap_windows = NULL;
         c->ncmap = 0;
@@ -615,9 +636,6 @@ clientAdjustCoordGravity (Client *c, int gravity, XWindowChanges *wc, unsigned l
     }
 }
 
-#define WIN_MOVED   (mask & (CWX | CWY))
-#define WIN_RESIZED (mask & (CWWidth | CWHeight))
-
 static void
 clientConfigureWindows (Client *c, XWindowChanges * wc, unsigned long mask, unsigned short flags)
 {
@@ -632,7 +650,7 @@ clientConfigureWindows (Client *c, XWindowChanges * wc, unsigned long mask, unsi
     change_mask_frame = mask & (CWX | CWY | CWWidth | CWHeight);
     change_mask_client = mask & (CWWidth | CWHeight);
 
-    if ((WIN_RESIZED) || (flags & CFG_FORCE_REDRAW))
+    if ((mask & (CWWidth | CWHeight)) || (flags & CFG_FORCE_REDRAW))
     {
         frameDraw (c, (flags & CFG_FORCE_REDRAW));
     }
@@ -661,11 +679,6 @@ clientConfigureWindows (Client *c, XWindowChanges * wc, unsigned long mask, unsi
         XConfigureWindow (display_info->dpy, c->window, change_mask_client, &change_values);
     }
     myDisplayErrorTrapPopIgnored (display_info);
-
-    if (WIN_RESIZED)
-    {
-        compositorResizeWindow (display_info, c->frame, frameX (c), frameY (c), frameWidth (c), frameHeight (c));
-    }
 }
 
 void
@@ -705,6 +718,7 @@ void
 clientConfigure (Client *c, XWindowChanges * wc, unsigned long mask, unsigned short flags)
 {
     int px, py, pwidth, pheight;
+    gboolean win_moved, win_resized;
 
     g_return_if_fail (c != NULL);
     g_return_if_fail (c->window != None);
@@ -733,7 +747,7 @@ clientConfigure (Client *c, XWindowChanges * wc, unsigned long mask, unsigned sh
     }
     if (mask & CWWidth)
     {
-        c-> width = clientCheckWidth (c, wc->width, flags & CFG_REQUEST);
+        c->width = clientCheckWidth (c, wc->width, flags & CFG_REQUEST);
     }
     if (mask & CWHeight)
     {
@@ -815,6 +829,7 @@ clientConfigure (Client *c, XWindowChanges * wc, unsigned long mask, unsigned sh
         {
             mask &= ~CWWidth;
         }
+
         if (c->height != pheight)
         {
             mask |= CWHeight;
@@ -841,13 +856,21 @@ clientConfigure (Client *c, XWindowChanges * wc, unsigned long mask, unsigned sh
       http://www.mail-archive.com/wm-spec-list@gnome.org/msg00382.html
 
      */
-    if ((WIN_MOVED) || (flags & CFG_NOTIFY) ||
-        ((flags & CFG_REQUEST) && !(WIN_MOVED || WIN_RESIZED)))
+    win_moved = (c->x != c->applied_geometry.x ||
+                 c->y != c->applied_geometry.y);
+    win_resized = (c->width != c->applied_geometry.width ||
+                   c->height != c->applied_geometry.height);
+
+    if ((win_moved) || (flags & (CFG_NOTIFY | CFG_FORCE_REDRAW)) ||
+        ((flags & CFG_REQUEST) && !(win_moved || win_resized)))
     {
         clientSendConfigureNotify (c);
     }
-#undef WIN_MOVED
-#undef WIN_RESIZED
+
+    c->applied_geometry.x = c->x;
+    c->applied_geometry.y = c->y;
+    c->applied_geometry.width = c->width;
+    c->applied_geometry.height = c->height;
 }
 
 void
@@ -920,7 +943,7 @@ clientMoveResizeWindow (Client *c, XWindowChanges * wc, unsigned long mask)
             flags |= CFG_FORCE_REDRAW;
         }
 
-        flags |= CFG_REQUEST | CFG_CONSTRAINED;
+        flags |= CFG_CONSTRAINED;
     }
     if ((mask & (CWWidth | CWHeight)) && !(mask & (CWX | CWY)))
     {
@@ -1104,9 +1127,12 @@ clientApplyMWMHints (Client *c, gboolean update)
 void
 clientGetWMNormalHints (Client *c, gboolean update)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
     XWindowChanges wc;
     unsigned long previous_value;
     long dummy;
+    int result, status;
 
     g_return_if_fail (c != NULL);
     g_return_if_fail (c->window != None);
@@ -1118,8 +1144,15 @@ clientGetWMNormalHints (Client *c, gboolean update)
     }
     g_assert (c->size);
 
+    screen_info = c->screen_info;
+    display_info = screen_info->display_info;
+
     dummy = 0;
-    if (!XGetWMNormalHints (clientGetXDisplay (c), c->window, c->size, &dummy))
+    myDisplayErrorTrapPush (display_info);
+    status = XGetWMNormalHints (display_info->dpy, c->window, c->size, &dummy);
+    result = myDisplayErrorTrapPop (display_info);
+
+    if ((result != Success) || !status)
     {
         c->size->flags = 0;
     }
@@ -1456,8 +1489,10 @@ clientCheckShape (Client *c)
 
     if (display_info->have_shape)
     {
+        myDisplayErrorTrapPush (display_info);
         XShapeQueryExtents (display_info->dpy, c->window, &boundingShaped, &xws, &yws, &wws,
                             &hws, &clipShaped, &xbs, &ybs, &wbs, &hbs);
+        myDisplayErrorTrapPopIgnored (display_info);
         return (boundingShaped != 0);
     }
     return FALSE;
@@ -1553,10 +1588,10 @@ clientSaveSizePos (Client *c)
 
     if (!FLAG_TEST (c->flags, CLIENT_FLAG_RESTORE_SIZE_POS))
     {
-        c->old_x = c->x;
-        c->old_width = c->width;
-        c->old_y = c->y;
-        c->old_height = c->height;
+        c->saved_geometry.x = c->x;
+        c->saved_geometry.width = c->width;
+        c->saved_geometry.y = c->y;
+        c->saved_geometry.height = c->height;
     }
 }
 
@@ -1567,10 +1602,10 @@ clientRestoreSizePos (Client *c)
 
     if (FLAG_TEST (c->flags, CLIENT_FLAG_RESTORE_SIZE_POS))
     {
-        c->x = c->old_x;
-        c->width = c->old_width;
-        c->y = c->old_y;
-        c->height = c->old_height;
+        c->x = c->saved_geometry.x;
+        c->width = c->saved_geometry.width;
+        c->y = c->saved_geometry.y;
+        c->height = c->saved_geometry.height;
 
         FLAG_UNSET (c->flags, CLIENT_FLAG_RESTORE_SIZE_POS);
         return TRUE;
@@ -1589,7 +1624,6 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     gboolean shaped;
     gchar *wm_name;
     unsigned long valuemask;
-    long pid;
     int i;
 
     g_return_val_if_fail (w != None, NULL);
@@ -1597,28 +1631,26 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     TRACE ("window 0x%lx", w);
 
     myDisplayGrabServer (display_info);
+    myDisplayErrorTrapPush (display_info);
 
     if (!XGetWindowAttributes (display_info->dpy, w, &attr))
     {
         DBG ("Cannot get window attributes for window (0x%lx)", w);
-        myDisplayUngrabServer (display_info);
-        return NULL;
+        goto out;
     }
 
     screen_info = myDisplayGetScreenFromRoot (display_info, attr.root);
     if (!screen_info)
     {
         DBG ("Cannot determine screen info from window (0x%lx)", w);
-        myDisplayUngrabServer (display_info);
-        return NULL;
+        goto out;
     }
 
     if (w == screen_info->xfwm4_win)
     {
         TRACE ("not managing our own event window");
         compositorAddWindow (display_info, w, NULL);
-        myDisplayUngrabServer (display_info);
-        return NULL;
+        goto out;
     }
 
 #ifdef ENABLE_KDE_SYSTRAY_PROXY
@@ -1628,8 +1660,7 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
         if (screen_info->systray != None)
         {
             sendSystrayReqDock (display_info, w, screen_info->systray);
-            myDisplayUngrabServer (display_info);
-            return NULL;
+            goto out;
         }
         TRACE ("no systray found for this screen");
     }
@@ -1638,17 +1669,14 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     if (attr.override_redirect)
     {
         TRACE ("override redirect window 0x%lx", w);
-        compositorAddWindow (display_info, w, NULL);
-        myDisplayUngrabServer (display_info);
-        return NULL;
+        goto out;
     }
 
     c = g_new0 (Client, 1);
     if (!c)
     {
         TRACE ("cannot allocate memory for the window structure");
-        myDisplayUngrabServer (display_info);
-        return NULL;
+        goto out;
     }
 
     c->window = w;
@@ -1677,6 +1705,11 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     c->width = attr.width;
     c->height = attr.height;
 
+    c->applied_geometry.x = c->x;
+    c->applied_geometry.y = c->y;
+    c->applied_geometry.width = c->width;
+    c->applied_geometry.height = c->height;
+
 #ifdef HAVE_LIBSTARTUP_NOTIFICATION
     c->startup_id = NULL;
 #endif /* HAVE_LIBSTARTUP_NOTIFICATION */
@@ -1687,8 +1720,8 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     c->size->y = c->y;
     c->size->width = c->width;
     c->size->height = c->height;
-    c->previous_width = -1;
-    c->previous_height = -1;
+    c->frame_cache_width = -1;
+    c->frame_cache_height = -1;
     c->border_width = attr.border_width;
     c->cmap = attr.colormap;
 
@@ -1785,7 +1818,7 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
 
     clientGetWMProtocols (c);
     c->win_layer = WIN_LAYER_NORMAL;
-    c->fullscreen_old_layer = c->win_layer;
+    c->pre_fullscreen_layer = c->win_layer;
 
     /* net_wm_user_time standard */
     c->user_time = 0;
@@ -1793,9 +1826,8 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     clientAddUserTimeWin (c);
     clientGetUserTime (c);
 
-    /*client PID */
-    getHint (display_info, c->window, NET_WM_PID, (long *) &pid);
-    c->pid = (GPid) pid;
+    /* client PID */
+    c->pid = getWindowPID (display_info, c->window);
     TRACE ("client \"%s\" (0x%lx) PID = %i", c->name, c->window, c->pid);
 
     /* Apply startup notification properties if available */
@@ -1833,15 +1865,15 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
        initially maximized or fullscreen windows being placed offscreen
        once de-maximized
      */
-    c->old_x = c->x;
-    c->old_y = c->y;
-    c->old_width = c->width;
-    c->old_height = c->height;
+    c->saved_geometry.x = c->x;
+    c->saved_geometry.y = c->y;
+    c->saved_geometry.width = c->width;
+    c->saved_geometry.height = c->height;
 
-    c->fullscreen_old_x = c->x;
-    c->fullscreen_old_y = c->y;
-    c->fullscreen_old_width = c->width;
-    c->fullscreen_old_height = c->height;
+    c->pre_fullscreen_geometry.x = c->x;
+    c->pre_fullscreen_geometry.y = c->y;
+    c->pre_fullscreen_geometry.width = c->width;
+    c->pre_fullscreen_geometry.height = c->height;
 
     /*
        We must call clientApplyInitialState() after having placed the
@@ -1989,8 +2021,8 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
         else
         {
             clientRaise (c, None);
+            clientShow (c, TRUE);
             clientInitFocusFlag (c);
-            clientSetNetActions (c);
         }
     }
     else
@@ -2019,13 +2051,16 @@ clientFrame (DisplayInfo *display_info, Window w, gboolean recapture)
     }
 #endif /* HAVE_XSYNC */
 
-    /* Window is reparented now, so we can safely release the grab
-     * on the server
-     */
-    myDisplayUngrabServer (display_info);
 
     DBG ("client \"%s\" (0x%lx) is now managed", c->name, c->window);
     DBG ("client_count=%d", screen_info->client_count);
+
+out:
+    /* Window is reparented now, so we can safely release the grab
+     * on the server
+     */
+    myDisplayErrorTrapPopIgnored (display_info);
+    myDisplayUngrabServer (display_info);
 
     return c;
 }
@@ -2420,13 +2455,17 @@ clientWithdrawSingle (Client *c, GList *exclude_list, gboolean iconify)
         /* Adjust to urgency state as the window is not visible */
         clientUpdateUrgency (c);
     }
+
+    myDisplayErrorTrapPush (display_info);
     XUnmapWindow (display_info->dpy, c->frame);
     XUnmapWindow (display_info->dpy, c->window);
+    myDisplayErrorTrapPopIgnored (display_info);
+
     if (iconify)
     {
         FLAG_SET (c->flags, CLIENT_FLAG_ICONIFIED);
         setWMState (display_info, c->window, IconicState);
-        if (!screen_info->show_desktop)
+        if (!screen_info->show_desktop && !screen_info->params->cycle_minimized)
         {
             clientSetLast (c);
         }
@@ -2463,8 +2502,8 @@ clientWithdraw (Client *c, guint ws, gboolean iconify)
 
         if (clientIsTransientOrModalForGroup (c2))
         {
-
-            if (clientTransientOrModalHasAncestor (c2, c2->win_workspace))
+            if ((c2 != c) &&
+                clientTransientOrModalHasAncestor (c2, c2->win_workspace))
             {
                 /* Other ancestors for that transient for group are still
                  * visible on current workspace, so don't hide it...
@@ -2673,10 +2712,18 @@ clientClose (Client *c)
 void
 clientKill (Client *c)
 {
+    ScreenInfo *screen_info;
+    DisplayInfo *display_info;
+
     g_return_if_fail (c != NULL);
     TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
 
-    XKillClient (clientGetXDisplay (c), c->window);
+    screen_info = c->screen_info;
+    display_info = screen_info->display_info;
+
+    myDisplayErrorTrapPush (display_info);
+    XKillClient (display_info->dpy, c->window);
+    myDisplayErrorTrapPopIgnored (display_info);
 }
 
 void
@@ -2816,7 +2863,10 @@ clientShade (Client *c)
         {
             clientSetFocus (screen_info, c, myDisplayGetCurrentTime (display_info), FOCUS_FORCE);
         }
+
+        myDisplayErrorTrapPush (display_info);
         XUnmapWindow (display_info->dpy, c->window);
+        myDisplayErrorTrapPopIgnored (display_info);
 
         wc.width = c->width;
         wc.height = c->height;
@@ -3015,10 +3065,10 @@ clientUpdateFullscreenSize (Client *c)
     }
     else
     {
-        wc.x = c->fullscreen_old_x;
-        wc.y = c->fullscreen_old_y;
-        wc.width = c->fullscreen_old_width;
-        wc.height = c->fullscreen_old_height;
+        wc.x = c->pre_fullscreen_geometry.x;
+        wc.y = c->pre_fullscreen_geometry.y;
+        wc.width = c->pre_fullscreen_geometry.width;
+        wc.height = c->pre_fullscreen_geometry.height;
     }
 
     if (FLAG_TEST (c->xfwm_flags, XFWM_FLAG_MANAGED))
@@ -3111,7 +3161,7 @@ void clientToggleLayerAbove (Client *c)
     TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
 
     if ((c->type & WINDOW_REGULAR_FOCUSABLE) &&
-        !clientIsTransientOrModal (c) &&
+        !clientIsValidTransientOrModal (c) &&
         !FLAG_TEST (c->flags, CLIENT_FLAG_FULLSCREEN))
     {
         FLAG_UNSET (c->flags, CLIENT_FLAG_BELOW);
@@ -3126,7 +3176,7 @@ void clientToggleLayerBelow (Client *c)
     TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
 
     if ((c->type & WINDOW_REGULAR_FOCUSABLE) &&
-        !clientIsTransientOrModal (c) &&
+        !clientIsValidTransientOrModal (c) &&
         !FLAG_TEST (c->flags, CLIENT_FLAG_FULLSCREEN))
     {
         FLAG_UNSET (c->flags, CLIENT_FLAG_ABOVE);
@@ -3186,10 +3236,10 @@ clientNewMaxState (Client *c, XWindowChanges *wc, int mode)
         if (FLAG_TEST_ALL (c->flags, CLIENT_FLAG_MAXIMIZED))
         {
             FLAG_UNSET (c->flags, CLIENT_FLAG_MAXIMIZED | CLIENT_FLAG_RESTORE_SIZE_POS);
-            wc->x = c->old_x;
-            wc->y = c->old_y;
-            wc->width = c->old_width;
-            wc->height = c->old_height;
+            wc->x = c->saved_geometry.x;
+            wc->y = c->saved_geometry.y;
+            wc->width = c->saved_geometry.width;
+            wc->height = c->saved_geometry.height;
 
             return;
         }
@@ -3218,10 +3268,10 @@ clientNewMaxState (Client *c, XWindowChanges *wc, int mode)
             {
                 FLAG_UNSET (c->flags, CLIENT_FLAG_RESTORE_SIZE_POS);
             }
-            wc->x = c->old_x;
-            wc->y = c->old_y;
-            wc->width = c->old_width;
-            wc->height = c->old_height;
+            wc->x = c->saved_geometry.x;
+            wc->y = c->saved_geometry.y;
+            wc->width = c->saved_geometry.width;
+            wc->height = c->saved_geometry.height;
         }
     }
 
@@ -3238,10 +3288,10 @@ clientNewMaxState (Client *c, XWindowChanges *wc, int mode)
             {
                 FLAG_UNSET (c->flags, CLIENT_FLAG_RESTORE_SIZE_POS);
             }
-            wc->x = c->old_x;
-            wc->y = c->old_y;
-            wc->width = c->old_width;
-            wc->height = c->old_height;
+            wc->x = c->saved_geometry.x;
+            wc->y = c->saved_geometry.y;
+            wc->width = c->saved_geometry.width;
+            wc->height = c->saved_geometry.height;
         }
     }
 }
@@ -3388,6 +3438,11 @@ clientToggleMaximizedAtPoint (Client *c, gint cx, gint cy, int mode, gboolean re
         return FALSE;
     }
 
+    if (c->tile_mode != TILE_NONE)
+    {
+        clientUntile (c);
+    }
+
     screen_info = c->screen_info;
     display_info = screen_info->display_info;
     myScreenFindMonitorAtPoint (screen_info, cx, cy, &rect);
@@ -3488,6 +3543,7 @@ clientTile (Client *c, gint cx, gint cy, tilePositionType tile, gboolean send_co
         return FALSE;
     }
     FLAG_SET (c->flags, CLIENT_FLAG_RESTORE_SIZE_POS);
+    c->tile_mode = tile;
 
     c->x = wc.x;
     c->y = wc.y;
@@ -3513,6 +3569,97 @@ clientTile (Client *c, gint cx, gint cy, tilePositionType tile, gboolean send_co
     }
 
     return TRUE;
+}
+
+void
+clientUntile (Client *c)
+{
+    g_return_if_fail (c != NULL);
+    TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
+
+    c->tile_mode = TILE_NONE;
+}
+
+gboolean
+clientToggleTile (Client *c, tilePositionType tile)
+{
+    DisplayInfo *display_info;
+    ScreenInfo *screen_info;
+
+    g_return_val_if_fail (c != NULL, FALSE);
+    TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
+
+    screen_info = c->screen_info;
+    display_info = screen_info->display_info;
+
+    if (c->tile_mode == tile)
+    {
+        clientUntile (c);
+        clientRestoreSizePos (c);
+        setNetFrameExtents (display_info,
+                            c->window,
+                            frameTop (c),
+                            frameLeft (c),
+                            frameRight (c),
+                            frameBottom (c));
+
+        clientSetNetActions (c);
+        clientReconfigure (c, CFG_FORCE_REDRAW);
+
+        return TRUE;
+    }
+    else
+    {
+        return clientTile (c,
+                           frameX (c) + frameWidth (c) / 2,
+                           frameY (c) + frameHeight (c) / 2,
+                           tile,
+                           TRUE,
+                           TRUE);
+    }
+}
+
+
+static void
+clientRecomputeTileSize (Client *c)
+{
+    ScreenInfo *screen_info;
+    XWindowChanges wc;
+    GdkRectangle rect;
+
+    g_return_if_fail (c != NULL);
+    TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
+
+    screen_info = c->screen_info;
+
+    myScreenFindMonitorAtPoint (screen_info,
+                                frameX (c) + frameWidth (c) / 2,
+                                frameY (c) + frameHeight (c) / 2,
+                                &rect);
+
+    if (!clientNewTileSize (c, &wc, &rect, c->tile_mode))
+    {
+        return;
+    }
+
+    c->x = wc.x;
+    c->y = wc.y;
+    c->width = wc.width;
+    c->height = wc.height;
+}
+
+void
+clientUpdateTileSize (Client *c)
+{
+    g_return_if_fail (c != NULL);
+    TRACE ("client \"%s\" (0x%lx)", c->name, c->window);
+
+    /* Recompute size and position of maximized windows */
+    if (c->tile_mode != TILE_NONE)
+    {
+        clientRecomputeTileSize (c);
+        clientReconfigure (c, CFG_NOTIFY);
+    }
 }
 
 void
@@ -3701,6 +3848,10 @@ clientScreenResize(ScreenInfo *screen_info, gboolean fully_visible)
         {
             clientUpdateMaximizeSize (c);
         }
+        else if (c->tile_mode != TILE_NONE)
+        {
+            clientUpdateTileSize (c);
+        }
         else
         {
             configure_flags = CFG_CONSTRAINED | CFG_REQUEST;
@@ -3710,15 +3861,15 @@ clientScreenResize(ScreenInfo *screen_info, gboolean fully_visible)
             }
             if (FLAG_TEST (c->xfwm_flags, XFWM_FLAG_SAVED_POS))
             {
-                wc.x = c->saved_x;
-                wc.y = c->saved_y;
+                wc.x = c->pre_relayout_x;
+                wc.y = c->pre_relayout_y;
             }
             else
             {
                 FLAG_SET (c->xfwm_flags, XFWM_FLAG_SAVED_POS);
 
-                c->saved_x = c->x;
-                c->saved_y = c->y;
+                c->pre_relayout_x = c->x;
+                c->pre_relayout_y = c->y;
 
                 wc.x = c->x;
                 wc.y = c->y;

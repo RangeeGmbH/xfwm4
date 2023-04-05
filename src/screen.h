@@ -188,6 +188,7 @@ struct _ScreenInfo
     Window root_overlay;
 #endif
     GList *cwindows;
+    GHashTable *cwindow_hash;
     Window output;
 
     gaussian_conv *gaussianMap;
@@ -196,12 +197,14 @@ struct _ScreenInfo
     guchar *shadowTop;
 
     gushort current_buffer;
+    gushort use_n_buffers;
     Pixmap rootPixmap[N_BUFFERS];
     Picture rootBuffer[N_BUFFERS];
     Picture zoomBuffer;
     Picture rootPicture;
     Picture blackPicture;
     Picture rootTile;
+    XserverRegion screenRegion;
     XserverRegion prevDamage;
     XserverRegion allDamage;
     unsigned long cursorSerial;
@@ -209,6 +212,7 @@ struct _ScreenInfo
     gint cursorOffsetX;
     gint cursorOffsetY;
     XRectangle cursorLocation;
+    gboolean cursor_is_zoomed;
 
     guint wins_unredirected;
     gboolean compositor_active;
@@ -228,16 +232,20 @@ struct _ScreenInfo
 
 #ifdef HAVE_EPOXY
     gboolean texture_inverted;
+    gboolean has_mesa_swap_control;
+    gboolean has_ext_swap_control;
+    gboolean has_ext_arb_sync;
 
     GLuint rootTexture;
     GLenum texture_format;
     GLenum texture_target;
     GLenum texture_type;
     GLfloat texture_filter;
-    GLXDrawable glx_drawable;
+    GLXDrawable glx_drawable[N_BUFFERS];
     GLXFBConfig glx_fbconfig;
     GLXContext glx_context;
     GLXWindow glx_window;
+    GLsync gl_sync;
 #ifdef HAVE_XSYNC
     XSyncFence fence[N_BUFFERS];
 #endif /* HAVE_XSYNC */
@@ -286,6 +294,8 @@ Client                  *myScreenGetClientFromWindow            (ScreenInfo *,
                                                                  Window,
                                                                  unsigned short);
 gboolean                 myScreenComputeSize                    (ScreenInfo *);
+gboolean                 myScreenHasPrimaryMonitor              (ScreenInfo *,
+                                                                 Window w);
 gint                     myScreenGetNumMonitors                 (ScreenInfo *);
 gint                     myScreenGetMonitorIndex                (ScreenInfo *,
                                                                  gint);
@@ -296,6 +306,7 @@ void                     myScreenFindMonitorAtPoint             (ScreenInfo *,
                                                                  gint,
                                                                  GdkRectangle *);
 PangoFontDescription *   myScreenGetFontDescription             (ScreenInfo *);
+void                     myScreenUpdateFontAttr                 (ScreenInfo *);
 void                     myScreenGetXineramaMonitorGeometry     (ScreenInfo *,
                                                                  gint,
                                                                  GdkRectangle *);

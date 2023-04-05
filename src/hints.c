@@ -18,7 +18,7 @@
 
         oroborus - (c) 2001 Ken Lynch
         Metacity - (c) 2001 Havoc Pennington
-        xfwm4    - (c) 2002-2015 Olivier Fourdan
+        xfwm4    - (c) 2002-2020 Olivier Fourdan
 
  */
 
@@ -30,6 +30,9 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xmd.h>
+#ifdef HAVE_XRES
+#include <X11/extensions/XRes.h>
+#endif
 
 #include <glib.h>
 #include <gdk/gdk.h>
@@ -422,6 +425,7 @@ setNetSupportedHint (DisplayInfo *display_info, Window root, Window check_win)
     atoms[i++] = display_info->atoms[NET_WM_ICON_NAME];
     atoms[i++] = display_info->atoms[NET_WM_MOVERESIZE];
     atoms[i++] = display_info->atoms[NET_WM_NAME];
+    atoms[i++] = display_info->atoms[NET_WM_OPAQUE_REGION];
     atoms[i++] = display_info->atoms[NET_WM_PID];
     atoms[i++] = display_info->atoms[NET_WM_PING];
     atoms[i++] = display_info->atoms[NET_WM_STATE];
@@ -687,9 +691,15 @@ setUTF8StringHint (DisplayInfo *display_info, Window w, int atom_id, const gchar
 void
 getTransientFor (DisplayInfo *display_info, Window root, Window w, Window * transient_for)
 {
+    int result, status;
+
     TRACE ("window 0x%lx", w);
 
-    if (XGetTransientForHint (display_info->dpy, w, transient_for))
+    myDisplayErrorTrapPush (display_info);
+    status = XGetTransientForHint (display_info->dpy, w, transient_for);
+    result = myDisplayErrorTrapPop (display_info);
+
+    if ((result == Success) && status)
     {
         if (*transient_for == None)
         {
@@ -1409,12 +1419,15 @@ getSystrayWindow (DisplayInfo *display_info, Atom net_system_tray_selection)
 
     TRACE ("entering");
 
+    myDisplayErrorTrapPush (display_info);
     systray_win = XGetSelectionOwner (display_info->dpy, net_system_tray_selection);
     if (systray_win)
     {
         XSelectInput (display_info->dpy, systray_win, StructureNotifyMask);
     }
+    myDisplayErrorTrapPopIgnored (display_info);
     TRACE ("new systray window:  0x%lx", systray_win);
+
     return systray_win;
 }
 #endif
@@ -1443,3 +1456,94 @@ getWindowStartupId (DisplayInfo *display_info, Window w, gchar **startup_id)
     return (*startup_id != NULL);
 }
 #endif
+
+GPid
+getWindowPID (DisplayInfo *display_info, Window w)
+{
+    long pid = 0;
+#ifdef HAVE_XRES
+    XResClientIdSpec client_specs;
+    XResClientIdValue *client_ids = NULL;
+    int i;
+    int result;
+    long num_ids;
+
+    if (display_info->have_xres)
+    {
+        client_specs.client = w;
+        client_specs.mask = XRES_CLIENT_ID_PID_MASK;
+
+        myDisplayErrorTrapPush (display_info);
+
+        XResQueryClientIds (display_info->dpy, 1, &client_specs, &num_ids, &client_ids);
+
+        result = myDisplayErrorTrapPop (display_info);
+
+        if (result == Success)
+        {
+            for (i = 0; i < num_ids; i++)
+            {
+                if (client_ids[i].spec.mask == XRES_CLIENT_ID_PID_MASK)
+                {
+                    CARD32 *value = client_ids[i].value;
+                    pid = (long) *value;
+                    break;
+                }
+            }
+
+            XFree(client_ids);
+
+            if (pid > 0)
+            {
+                return (GPid) pid;
+            }
+        }
+    }
+#endif /* HAVE_XRES */
+
+    getHint (display_info, w, NET_WM_PID, (long *) &pid);
+
+    return (GPid) pid;
+}
+
+unsigned int
+getOpaqueRegionRects (DisplayInfo *display_info, Window w, XRectangle **p_rects)
+{
+    gulong *data;
+    XRectangle *rects;
+    int i, nitems, nrects;
+
+    TRACE ("window 0x%lx", w);
+    if (getCardinalList (display_info, w, NET_WM_OPAQUE_REGION, &data, &nitems))
+    {
+        if (nitems % 4)
+        {
+            if (data)
+            {
+                XFree (data);
+            }
+
+            return 0;
+        }
+
+        rects = g_new0 (XRectangle, nitems / 4);
+        nrects = 0;
+        i = 0;
+
+        while (i < nitems)
+        {
+            XRectangle *rect = &rects[nrects++];
+
+            rect->x = data[i++];
+            rect->y = data[i++];
+            rect->width = data[i++];
+            rect->height = data[i++];
+        }
+
+        XFree (data);
+        *p_rects = rects;
+        return (unsigned int) nrects;
+    }
+
+    return 0;
+}

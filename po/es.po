@@ -1,22 +1,26 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
 # Translators:
-# Xfce Bot <transifex@xfce.org>, 2019
-# Franklin David Macias Avellan <franklin.macias864@gmail.com>, 2019
+# Adolfo Jayme Barrientos, 2013-2014
+# Adolfo Jayme-Barrientos, 2013
+# Adolfo Jayme-Barrientos, 2014
+# Casper casper, 2019-2020
+# Edscott Wilson Garcia <edscott@xfce.org>, 2004
+# gabrieltandil <gabriel.tandil@gmail.com>, 2015
+# gabrieltandil <gabriel.tandil@gmail.com>, 2015-2016
+# Ignacio Poggi <ignaciop.3@gmail.com>, 2020
+# prflr88 <prflr88@gmail.com>, 2017
+# prflr88 <prflr88@gmail.com>, 2013-2015
 # Toni Estévez <toni.estevez@gmail.com>, 2019
-# Francisco <fserrador@gmail.com>, 2019
-# 
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: Xfwm4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-08-29 00:32+0200\n"
-"PO-Revision-Date: 2019-12-26 18:23+0000\n"
-"Last-Translator: Toni Estévez <toni.estevez@gmail.com>\n"
+"POT-Creation-Date: 2020-12-13 00:49+0100\n"
+"PO-Revision-Date: 2020-12-15 14:38+0000\n"
+"Last-Translator: Casper casper\n"
 "Language-Team: Spanish (http://www.transifex.com/xfce/xfwm4/language/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -28,9 +32,7 @@ msgstr ""
 msgid ""
 "This window might be busy and is not responding.\n"
 "Do you want to terminate the application?"
-msgstr ""
-"Parece que esta ventana está ocupada y no responde.\n"
-"¿Quiere finalizar la aplicación?"
+msgstr "Parece que esta ventana está ocupada y no responde.\n¿Quiere finalizar la aplicación?"
 
 #: ../helper-dialog/helper-dialog.c:99
 msgid "Warning"
@@ -40,38 +42,36 @@ msgstr "Atención"
 msgid "None"
 msgstr "Ninguno"
 
-#: ../settings-dialogs/tweaks-settings.c:472
+#: ../settings-dialogs/tweaks-settings.c:482
 msgid "Session manager socket"
 msgstr "Socket del gestor de sesión"
 
-#: ../settings-dialogs/tweaks-settings.c:472
+#: ../settings-dialogs/tweaks-settings.c:482
 #: ../settings-dialogs/workspace-settings.c:398
-#: ../settings-dialogs/xfwm4-settings.c:248
+#: ../settings-dialogs/xfwm4-settings.c:238
 msgid "SOCKET ID"
-msgstr "Id. del SOCKET"
+msgstr "ID del SOCKET"
 
-#: ../settings-dialogs/tweaks-settings.c:473
+#: ../settings-dialogs/tweaks-settings.c:483
 #: ../settings-dialogs/workspace-settings.c:399
-#: ../settings-dialogs/xfwm4-settings.c:250
+#: ../settings-dialogs/xfwm4-settings.c:240
 msgid "Version information"
 msgstr "Información de la versión"
 
-#: ../settings-dialogs/tweaks-settings.c:491
+#: ../settings-dialogs/tweaks-settings.c:501
 #: ../settings-dialogs/workspace-settings.c:416
-#: ../settings-dialogs/xfwm4-settings.c:907
+#: ../settings-dialogs/xfwm4-settings.c:871
 msgid "."
 msgstr "."
 
-#: ../settings-dialogs/tweaks-settings.c:495
+#: ../settings-dialogs/tweaks-settings.c:505
 #: ../settings-dialogs/workspace-settings.c:420
-#: ../settings-dialogs/xfwm4-settings.c:911
+#: ../settings-dialogs/xfwm4-settings.c:875
 #, c-format
 msgid ""
 "%s: %s\n"
 "Try %s --help to see a full list of available command line options.\n"
-msgstr ""
-"%s: %s\n"
-"Ejecute %s --help para ver una lista completa de las opciones de línea de órdenes disponibles.\n"
+msgstr "%s: %s\nEjecute %s --help para ver una lista completa de las opciones de línea de órdenes disponibles.\n"
 
 #: ../settings-dialogs/workspace-settings.c:81
 #: ../settings-dialogs/workspace-settings.c:96
@@ -84,7 +84,7 @@ msgid "Workspace Name"
 msgstr "Nombre del área de trabajo"
 
 #: ../settings-dialogs/workspace-settings.c:398
-#: ../settings-dialogs/xfwm4-settings.c:248
+#: ../settings-dialogs/xfwm4-settings.c:238
 msgid "Settings manager socket"
 msgstr "Socket del gestor de configuración"
 
@@ -98,6 +98,14 @@ msgstr "Gestor de ventanas"
 msgid "Configure window behavior and shortcuts"
 msgstr "Configure el comportamiento de las ventanas y los atajos"
 
+#: ../settings-dialogs/xfce-wm-settings.desktop.in.h:3
+msgid ""
+"windows;management;settings;preferences;themes;styles;decorations;title "
+"bar;font;buttons;menu;minimize;maximize;shade;roll up;layout;keyboard "
+"shortcuts;focus;snapping;screen;workspaces;edges;corner;hide "
+"content;move;resize;moving;resizing;double click;"
+msgstr "ventanas;administración;configuraciones;preferencias;temas;estilos;decoraciones;barra de título;fuente;botones;menú;minimizar;maximizar;sombrear;enrollar;diseño;atajos de teclado;enfoque;ajuste;pantalla;espacios de trabajo;bordes;esquina;ocultar contenido;mover;cambiar el tamaño;mover;cambiar el tamaño;doble clic;"
+
 #: ../settings-dialogs/xfce-wmtweaks-settings.desktop.in.h:1
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:1
 msgid "Window Manager Tweaks"
@@ -108,6 +116,13 @@ msgstr "Ajustes del gestor de ventanas"
 msgid "Fine-tune window behaviour and effects"
 msgstr "Ajuste con precisión el comportamiento y los efectos de las ventanas"
 
+#: ../settings-dialogs/xfce-wmtweaks-settings.desktop.in.h:3
+msgid ""
+"windows;behavior;settings;preferences;cycling;cycle;switching;focus;raises;accessibility;key;dragging;move;moving;hide;frame;title"
+" bar;maximized;tile;screen;edge;hot corner;snapping;mouse wheel;roll "
+"up;workspaces;placement;compositor;compositing;enable;disable;shadows;decorations;opacity;resize;inactive;preview;compiz;transitions;"
+msgstr "ventanas;comportamiento;Ajustes;preferencias;ciclismo;ciclo;cambio;enfoque;aumentos;accesibilidad;tecla;arrastrar;mover; movimiento;ocultar;marco;barra de título;maximizado;mosaico;pantalla;borde;esquina caliente;chasquido;rueda del mouse;enrollar;espacios de trabajo;colocación;compositor;composición;habilitar;deshabilitar;sombras;decoraciones;opacidad;redimensionar;inactivo;vista previa;compiz;transiciones;"
+
 #: ../settings-dialogs/xfce-workspaces-settings.desktop.in.h:1
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:1
 msgid "Workspaces"
@@ -117,6 +132,12 @@ msgstr "Áreas de trabajo"
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:2
 msgid "Configure layout, names and margins"
 msgstr "Configure la distribución, los nombres y los márgenes"
+
+#: ../settings-dialogs/xfce-workspaces-settings.desktop.in.h:3
+msgid ""
+"workspaces;settings;preferences;virtual "
+"desktops;number;windows;screen;margins;"
+msgstr "espacios de trabajo;ajustes;preferencias;escritorios virtuales;número;ventanas;pantalla;márgenes;"
 
 #: ../settings-dialogs/xfwm4-dialog.glade.h:3
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:3
@@ -332,67 +353,70 @@ msgstr "<b>Acción al hacer doble clic</b>"
 msgid "Ad_vanced"
 msgstr "_Opciones avanzadas"
 
-#: ../settings-dialogs/xfwm4-settings.c:227
+#: ../settings-dialogs/xfwm4-settings.c:216
 msgid "Shade window"
 msgstr "Enrollar la ventana"
 
-#: ../settings-dialogs/xfwm4-settings.c:228
+#: ../settings-dialogs/xfwm4-settings.c:217
 msgid "Hide window"
 msgstr "Ocultar la ventana"
 
-#: ../settings-dialogs/xfwm4-settings.c:229
+#: ../settings-dialogs/xfwm4-settings.c:218
 msgid "Maximize window"
 msgstr "Maximizar la ventana"
 
-#: ../settings-dialogs/xfwm4-settings.c:230
+#: ../settings-dialogs/xfwm4-settings.c:219
 msgid "Fill window"
 msgstr "Ampliar la ventana"
 
-#: ../settings-dialogs/xfwm4-settings.c:231
+#: ../settings-dialogs/xfwm4-settings.c:220
+msgid "Always on top"
+msgstr "Siempre arriba"
+
+#: ../settings-dialogs/xfwm4-settings.c:221
 msgid "Nothing"
 msgstr "Ninguna acción"
 
-#: ../settings-dialogs/xfwm4-settings.c:236
+#: ../settings-dialogs/xfwm4-settings.c:226
 msgid "Left"
 msgstr "Izquierda"
 
-#: ../settings-dialogs/xfwm4-settings.c:237
+#: ../settings-dialogs/xfwm4-settings.c:227
 msgid "Center"
 msgstr "Centro"
 
-#: ../settings-dialogs/xfwm4-settings.c:238
+#: ../settings-dialogs/xfwm4-settings.c:228
 msgid "Right"
 msgstr "Derecha"
 
-#: ../settings-dialogs/xfwm4-settings.c:387
+#: ../settings-dialogs/xfwm4-settings.c:344
 msgid "Theme"
 msgstr "Tema"
 
-#: ../settings-dialogs/xfwm4-settings.c:542
+#: ../settings-dialogs/xfwm4-settings.c:499
 msgid "Action"
 msgstr "Acción"
 
-#: ../settings-dialogs/xfwm4-settings.c:547
+#: ../settings-dialogs/xfwm4-settings.c:506
 msgid "Shortcut"
 msgstr "Atajo"
 
-#: ../settings-dialogs/xfwm4-settings.c:936
+#: ../settings-dialogs/xfwm4-settings.c:900
 #, c-format
 msgid "Failed to initialize xfconf. Reason: %s"
-msgstr ""
-"No se pudo inicializar el servicio de configuración de Xfce. Motivo: %s"
+msgstr "No se pudo inicializar el servicio de configuración de Xfce. Motivo: %s"
 
-#: ../settings-dialogs/xfwm4-settings.c:947
+#: ../settings-dialogs/xfwm4-settings.c:911
 msgid "Could not create the settings dialog."
 msgstr "No se pudo crear el diálogo de configuración."
 
-#: ../settings-dialogs/xfwm4-settings.c:1946
+#: ../settings-dialogs/xfwm4-settings.c:1912
 msgid ""
 "This will reset all shortcuts to their default values. Do you really want to"
 " do this?"
 msgstr "¿Seguro que quiere restablecer los valores predeterminados de todos los atajos?"
 
-#: ../settings-dialogs/xfwm4-settings.c:1948
+#: ../settings-dialogs/xfwm4-settings.c:1914
 msgid "Reset to Defaults"
 msgstr "Restablecer los valores predeterminados"
 
@@ -468,9 +492,7 @@ msgstr "Ocultar el título de las ventanas maximizadas"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:24
 msgid "Automatically _tile windows when moving toward the screen edge"
-msgstr ""
-"Automáticamente poner ventanas en _mosaico cuando se desplazan al borde de "
-"la pantalla"
+msgstr "Automáticamente poner ventanas en _mosaico cuando se desplazan al borde de la pantalla"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:25
 msgid "Use _edge resistance instead of window snapping"
@@ -494,32 +516,29 @@ msgstr "_Accesibilidad"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:30
 msgid "Use the _mouse wheel on the desktop to switch workspaces"
-msgstr ""
-"Usar la _rueda del ratón sobre el escritorio para cambiar de área de trabajo"
+msgstr "Usar la _rueda del ratón sobre el escritorio para cambiar de área de trabajo"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:31
 msgid ""
 "_Remember and recall previous workspace\n"
 "when switching via keyboard shortcuts"
-msgstr ""
-"_Recordar y reinvocar previo pupitre\n"
-"cuando cambie mediante atajos de teclado"
+msgstr "_Recordar áreas de trabajo previas\nal cambiar mediante atajos de teclado"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:33
 msgid "Wrap workspaces depending on the actual desktop _layout"
-msgstr "Cubrir pupitre dependiendo del _diseño de escritorio"
+msgstr "Cambiar de área de trabajo dependiendo de la _disposición real de escritorio"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:34
 msgid "Wrap workspaces when _the first or the last workspace is reached"
-msgstr "Cubrir pupitres cuando el primero o el último pupitre sea alcanzado"
+msgstr "Saltar al primer espacio de _trabajo cuando se avanza desde el último espacio de trabajo"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:35
 msgid "_Workspaces"
-msgstr "_Pupitres"
+msgstr "Áreas de _trabajo"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:36
 msgid "_Minimum size of windows to trigger smart placement:"
-msgstr "Tamaño _mínimo de ventana para activar posicionamiento inteligente:"
+msgstr "Tamaño _mínimo de ventana para activar posicionamiento inteligente"
 
 #. Smart placement size
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:40
@@ -552,8 +571,7 @@ msgstr "Mostrar directamente superposición de ventanas a _pantalla completa"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:47
 msgid "Show windows preview in place of icons when cycling"
-msgstr ""
-"Mostrar vistas previas de ventanas lugar de los iconos durante la selección"
+msgstr "Mostrar vistas previas de ventanas lugar de los iconos durante la selección"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:48
 msgid "Show shadows under pop_up windows"
@@ -568,44 +586,52 @@ msgid "Show shadows under _regular windows"
 msgstr "Mostrar sombra bajo ventanas _normales"
 
 #: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:51
+msgid "Zoom desktop with mouse wheel"
+msgstr "Zoom de escritorio con rueda de mouse"
+
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:52
+msgid "Zoom pointer along with the desktop"
+msgstr "Zoom de Puntero junto con el escritorio"
+
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:53
 msgid "Opaci_ty of window decorations:"
 msgstr "Opaci_dad de la decoración de ventanas:"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:52
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:54
 msgid "<i>Transparent</i>"
-msgstr "<i>Trasparente</i>"
+msgstr "<i>Transparente</i>"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:53
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:55
 msgid "<i>Opaque</i>"
 msgstr "<i>Opaco</i>"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:54
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:56
 msgid "Opacity of _inactive windows:"
 msgstr "Opacidad de ventanas _inactivas:"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:55
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:57
 msgid "Opacity of windows during _move:"
 msgstr "Opacidad de ventanas al des_plazarse:"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:56
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:58
 msgid "Opacity of windows during resi_ze:"
 msgstr "Opacidad de ventanas durante _redimensionado:"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:57
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:59
 msgid "Opacity of popup wi_ndows:"
 msgstr "Opacidad de ve_ntanas emergentes:"
 
-#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:58
+#: ../settings-dialogs/xfwm4-tweaks-dialog.glade.h:60
 msgid "C_ompositor"
 msgstr "C_ompositor"
 
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:3
 msgid "_Number of workspaces:"
-msgstr "_Número de pupitres:"
+msgstr "_Número de áreas de trabajo:"
 
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:4
 msgid "Layout"
-msgstr "Diseño"
+msgstr "Distribución"
 
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:5
 msgid "Names"
@@ -618,16 +644,14 @@ msgstr "_General"
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:7
 msgid ""
 "Margins are areas on the edges of the screen where no window will be placed"
-msgstr ""
-"Los márgenes son áreas a los lados de la pantalla donde no se colocará "
-"ninguna ventana"
+msgstr "Los márgenes son áreas a los lados de la pantalla donde no se colocará ninguna ventana"
 
 #: ../settings-dialogs/xfwm4-workspace-dialog.glade.h:8
 msgid "_Margins"
 msgstr "Márgenes"
 
 #. TRANSLATORS: "(on %s)" is like "running on" the name of the other host
-#: ../src/client.c:186
+#: ../src/client.c:207
 #, c-format
 msgid "%s (on %s)"
 msgstr "%s (en %s)"
@@ -635,36 +659,36 @@ msgstr "%s (en %s)"
 #: ../src/keyboard.c:144 ../src/settings.c:160
 #, c-format
 msgid "Unsupported keyboard modifier '%s'"
-msgstr "Modificador de teclado '%s' no admitido"
+msgstr "Modificador de teclado '%s' no soportado"
 
-#: ../src/main.c:695
-msgid "Fork to the background (not supported)"
-msgstr "Cambiar al fondo (no admitido)"
-
-#: ../src/main.c:697
+#: ../src/main.c:666
 msgid "Set the compositor mode"
 msgstr "Activa la composición"
 
-#: ../src/main.c:698
+#: ../src/main.c:668
 msgid "Set the vblank mode"
 msgstr "Activa el modo de blanco vertical"
 
-#: ../src/main.c:707
+#: ../src/main.c:678
 msgid "Replace the existing window manager"
-msgstr "Sustituir el gestor de ventanas existente"
+msgstr "Mantener acción del gestor de ventanas"
 
-#: ../src/main.c:708
+#: ../src/main.c:680
 msgid "Print version information and exit"
 msgstr "Información de versión"
 
-#: ../src/main.c:752
+#: ../src/main.c:683
+msgid "Enable debug logging"
+msgstr "Habilitar el registro de depuración"
+
+#: ../src/main.c:723
 msgid "[ARGUMENTS...]"
 msgstr "[ARGUMENTOS…]"
 
-#: ../src/main.c:759
+#: ../src/main.c:730
 #, c-format
 msgid "Type \"%s --help\" for usage."
-msgstr "Teclee «%s --help» para instrucciones de uso."
+msgstr "Escriba «%s --help» para instrucciones de uso."
 
 #: ../src/menu.c:51
 msgid "Ma_ximize"
@@ -704,48 +728,52 @@ msgid "_Same as Other Windows"
 msgstr "_Siempre como otras ventanas"
 
 #: ../src/menu.c:61
+msgid "Always _Below Other Windows"
+msgstr "Siempre _debajo de otras ventanas"
+
+#: ../src/menu.c:62
 msgid "Roll Window Up"
 msgstr "Enrollar ventana"
 
-#: ../src/menu.c:62
+#: ../src/menu.c:63
 msgid "Roll Window Down"
 msgstr "Desenrollar ventana"
 
-#: ../src/menu.c:63
+#: ../src/menu.c:64
 msgid "_Fullscreen"
 msgstr "_Pantalla completa"
 
-#: ../src/menu.c:64
+#: ../src/menu.c:65
 msgid "Leave _Fullscreen"
 msgstr "Abandonar _pantalla completa"
 
-#: ../src/menu.c:65
+#: ../src/menu.c:66
 msgid "Context _Help"
-msgstr "Ay_uda contextual"
+msgstr "A_yuda contextual"
 
 #. --------------------------------------------------------
-#: ../src/menu.c:67
-msgid "Always on _Visible Workspace"
-msgstr "Siempre en el pupitre _visible"
-
 #: ../src/menu.c:68
-msgid "Only _Visible on This Workspace"
-msgstr "Solamente _visible en este pupitre"
+msgid "Always on _Visible Workspace"
+msgstr "Siempre en el área de trabajo _visible"
 
 #: ../src/menu.c:69
+msgid "Only _Visible on This Workspace"
+msgstr "Solamente _visible en esta área de trabajo"
+
+#: ../src/menu.c:70
 msgid "Move to Another _Workspace"
-msgstr "Mover a otro _pupitre"
+msgstr "Mover a otra _área de trabajo"
 
 #. --------------------------------------------------------
 #: ../src/menu.c:75
 msgid "Destroy"
 msgstr "Destruir"
 
-#: ../src/menu.c:77
+#: ../src/menu.c:78
 msgid "_Quit"
 msgstr "_Salir"
 
-#: ../src/menu.c:78
+#: ../src/menu.c:79
 msgid "Restart"
 msgstr "Reiniciar"
 
@@ -757,7 +785,7 @@ msgstr "%s: GtkMenu no pudo capturar el puntero\n"
 #: ../src/terminate.c:77
 #, c-format
 msgid "Error reading data from child process: %s\n"
-msgstr "Error al leer datos del subproceso: %s\n"
+msgstr "Error al leer datos del proceso hijo: %s\n"
 
 #: ../src/terminate.c:135
 #, c-format

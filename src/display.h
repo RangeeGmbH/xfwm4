@@ -16,7 +16,7 @@
         MA 02110-1301, USA.
 
 
-        xfwm4    - (c) 2002-2015 Olivier Fourdan
+        xfwm4    - (c) 2002-2020 Olivier Fourdan
 
  */
 
@@ -217,6 +217,7 @@ enum
     NET_WM_ICON_NAME,
     NET_WM_MOVERESIZE,
     NET_WM_NAME,
+    NET_WM_OPAQUE_REGION,
     NET_WM_PID,
     NET_WM_PING,
     NET_WM_WINDOW_OPACITY,
@@ -308,6 +309,7 @@ struct _DisplayInfo
     gboolean have_render;
     gboolean have_xrandr;
     gboolean have_xsync;
+    gboolean have_xres;
     gint shape_version;
     gint shape_event_base;
     gint double_click_time;
@@ -333,6 +335,10 @@ struct _DisplayInfo
     gint xsync_event_base;
     gint xsync_error_base;
 #endif /* HAVE_XSYNC */
+#ifdef HAVE_XRES
+    gint xres_event_base;
+    gint xres_error_base;
+#endif /* HAVE_XRES */
 #ifdef HAVE_COMPOSITOR
     gint composite_error_base;
     gint composite_event_base;
@@ -340,7 +346,6 @@ struct _DisplayInfo
     gint damage_event_base;
     gint fixes_error_base;
     gint fixes_event_base;
-    gint composite_mode;
 
     gboolean have_composite;
     gboolean have_damage;
